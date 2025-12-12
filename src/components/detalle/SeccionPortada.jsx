@@ -18,9 +18,9 @@ export function SeccionPortada({ evaluacion }) {
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-lg">
-      
+
       {/* Background pattern sutil */}
-      <div 
+      <div
         className="absolute inset-0 opacity-5"
         style={{
           backgroundImage: `radial-gradient(circle at 2px 2px, ${colorNivel} 1px, transparent 0)`,
@@ -29,11 +29,11 @@ export function SeccionPortada({ evaluacion }) {
       />
 
       <div className="relative p-12">
-        
+
         {/* Badge de nivel - esquina superior derecha */}
-        <div 
+        <div
           className="absolute top-8 right-8 px-6 py-4 rounded-xl shadow-lg border-2 bg-white"
-          style={{ 
+          style={{
             borderColor: colorNivel
           }}
         >
@@ -41,13 +41,13 @@ export function SeccionPortada({ evaluacion }) {
             <Award className="w-4 h-4" style={{ color: colorNivel }} />
             <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">Nivel Ambiental</p>
           </div>
-          <p 
+          <p
             className="text-3xl font-bold mb-1"
             style={{ color: colorNivel }}
           >
             {Number(evaluacion.finalScore).toFixed(1)}
           </p>
-          <p 
+          <p
             className="text-sm font-semibold uppercase tracking-wide"
             style={{ color: colorNivel }}
           >
@@ -57,9 +57,11 @@ export function SeccionPortada({ evaluacion }) {
 
         {/* Logo */}
         <div className="mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-primary-600 to-primary-700 rounded-2xl flex items-center justify-center shadow-lg">
-            <Leaf className="w-10 h-10 text-white" />
-          </div>
+          <img
+            src="/src/assets/logo.svg"
+            alt="AmbientApp"
+            className="h-16 w-auto"
+          />
         </div>
 
         {/* Título principal */}
@@ -95,10 +97,10 @@ export function SeccionPortada({ evaluacion }) {
                 Fecha de generación
               </p>
               <p className="font-semibold text-slate-800">
-                {new Date().toLocaleDateString("es-CL", { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
+                {new Date().toLocaleDateString("es-CL", {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
                 })}
               </p>
             </div>

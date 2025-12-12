@@ -17,11 +17,10 @@ export default function MainLayout() {
   };
 
   const navLinkClass = (path) => {
-    return `flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-      isActive(path)
-        ? 'bg-primary-500 text-white'
-        : 'text-slate-700 hover:bg-slate-100'
-    }`;
+    return `flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${isActive(path)
+      ? 'bg-primary-500 text-white'
+      : 'text-slate-700 hover:bg-slate-100'
+      }`;
   };
 
   return (
@@ -30,12 +29,14 @@ export default function MainLayout() {
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="container-app">
           <div className="flex items-center justify-between h-16">
-            
+
             {/* Logo */}
             <Link to="/dashboard" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
-                <Leaf className="w-6 h-6 text-white" />
-              </div>
+              <img
+                src="/src/assets/logo.svg"
+                alt="AmbientApp"
+                className="h-12 w-auto"
+              />
               <div className="flex flex-col">
                 <span className="text-xl font-bold text-slate-900 leading-none">
                   AmbientApp
@@ -68,7 +69,7 @@ export default function MainLayout() {
                 </div>
                 <span className="font-medium text-slate-700">{user?.email}</span>
               </div>
-              
+
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
@@ -91,11 +92,13 @@ export default function MainLayout() {
         <div className="container-app py-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
-                <Leaf className="w-5 h-5 text-white" />
-              </div>
+              <img
+                src="/src/assets/logo.svg"
+                alt="AmbientApp"
+                className="h-10 w-auto"
+              />
               <div className="text-sm text-slate-600">
-                © {new Date().getFullYear()} AmbientApp. Todos los derechos reservados.
+                © {new Date().getFullYear()} AmbientApp. Elaborado por @mellamowalter.cl
               </div>
             </div>
             <div className="flex gap-6 text-sm text-slate-600">

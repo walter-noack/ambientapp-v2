@@ -31,8 +31,8 @@ export default function Dashboard() {
           (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
         );
 
-        const ultimas10 = ordenadas.slice(0, 10);
-        setEvaluaciones(ultimas10);
+        const ultimas5 = ordenadas.slice(0, 5);
+        setEvaluaciones(ultimas5);
 
         const total = data.length;
         const nivelPromedio =
@@ -308,10 +308,10 @@ const handleEliminar = async (id) => {
         <Card className="p-6">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-slate-900">
-              Últimos 10 Diagnósticos
+              Últimos 5 Diagnósticos
             </h2>
             <p className="text-sm text-slate-500 mt-1">
-              Historial reciente de evaluaciones ambientales
+              Historial reciente de diagnósticos ambientales
             </p>
           </div>
 
