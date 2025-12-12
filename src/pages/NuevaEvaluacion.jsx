@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/shared/ui/Button';
 import { Card } from '../components/shared/ui/Card';
 import { getEvaluacionById } from '../services/api';
+import { validarPasoPorNombre } from '../utils/validaciones';
 
 import { Paso1InfoGeneral } from '../components/formulario/Paso1InfoGeneral';
 import { Paso2HuellaCarbono } from '../components/formulario/Paso2HuellaCarbono';
@@ -177,6 +178,26 @@ export default function NuevaEvaluacion({ modoEdicion = false, modoDuplicar = fa
 
   // Navegación
   const goToNextStep = () => {
+    // Obtener el nombre del paso actual
+    const nombrePasoActual = activeSteps[currentStep - 1]?.name;
+
+    // Validar el paso actual
+    const erroresValidacion = validarPasoPorNombre(nombrePasoActual, formData);
+
+    // Si hay errores, mostrarlos y no avanzar
+    if (Object.keys(erroresValidacion).length > 0) {
+      setErrors(erroresValidacion);
+
+      // Scroll al inicio para ver los errores
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      // Mostrar alerta
+      alert('⚠️ Por favor completa correctamente todos los campos obligatorios antes de continuar.');
+      return;
+    }
+
+    // Si no hay errores, limpiar errores anteriores y avanzar
+    setErrors({});
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     }

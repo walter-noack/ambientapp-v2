@@ -5,15 +5,15 @@ export function Paso1InfoGeneral({ formData, updateField, updateFormData, errors
     updateFormData('dimensiones', dimension, !formData.dimensiones[dimension]);
   };
 
-  const alMenosUnaDimension = 
-    formData.dimensiones.carbono || 
-    formData.dimensiones.agua || 
-    formData.dimensiones.residuos || 
+  const alMenosUnaDimension =
+    formData.dimensiones.carbono ||
+    formData.dimensiones.agua ||
+    formData.dimensiones.residuos ||
     formData.dimensiones.rep;
 
   return (
     <div className="space-y-6">
-      
+
       {/* Nombre de la Empresa */}
       <Input
         label="Nombre de la Empresa"
@@ -77,7 +77,7 @@ export function Paso1InfoGeneral({ formData, updateField, updateFormData, errors
         <div className="space-y-3">
           {/* Carbono */}
           <label className="flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer hover:bg-primary-50 transition-colors"
-            style={{ 
+            style={{
               borderColor: formData.dimensiones.carbono ? '#10b981' : '#e2e8f0',
               backgroundColor: formData.dimensiones.carbono ? '#ecfdf5' : 'white'
             }}
@@ -101,7 +101,7 @@ export function Paso1InfoGeneral({ formData, updateField, updateFormData, errors
 
           {/* Agua */}
           <label className="flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer hover:bg-blue-50 transition-colors"
-            style={{ 
+            style={{
               borderColor: formData.dimensiones.agua ? '#3b82f6' : '#e2e8f0',
               backgroundColor: formData.dimensiones.agua ? '#eff6ff' : 'white'
             }}
@@ -125,7 +125,7 @@ export function Paso1InfoGeneral({ formData, updateField, updateFormData, errors
 
           {/* Residuos */}
           <label className="flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer hover:bg-green-50 transition-colors"
-            style={{ 
+            style={{
               borderColor: formData.dimensiones.residuos ? '#10b981' : '#e2e8f0',
               backgroundColor: formData.dimensiones.residuos ? '#ecfdf5' : 'white'
             }}
@@ -149,7 +149,7 @@ export function Paso1InfoGeneral({ formData, updateField, updateFormData, errors
 
           {/* REP */}
           <label className="flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer hover:bg-purple-50 transition-colors"
-            style={{ 
+            style={{
               borderColor: formData.dimensiones.rep ? '#8b5cf6' : '#e2e8f0',
               backgroundColor: formData.dimensiones.rep ? '#f5f3ff' : 'white'
             }}
@@ -174,6 +174,15 @@ export function Paso1InfoGeneral({ formData, updateField, updateFormData, errors
             </div>
           </label>
         </div>
+
+        {errors.dimensiones && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800 flex items-center gap-2">
+              <span>⚠️</span>
+              {errors.dimensiones}
+            </p>
+          </div>
+        )}
 
         {/* Mensaje de validación */}
         {!alMenosUnaDimension && (

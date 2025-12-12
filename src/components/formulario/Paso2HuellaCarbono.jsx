@@ -28,7 +28,14 @@ export function Paso2HuellaCarbono({ formData, updateFormData, errors }) {
 
     return (
         <div className="space-y-8">
-
+            {errors.general && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-800 flex items-center gap-2">
+                        <span>⚠️</span>
+                        {errors.general}
+                    </p>
+                </div>
+            )}
             <div>
                 <h2 className="text-2xl font-bold text-slate-900 mb-2">
                     Huella de Carbono
