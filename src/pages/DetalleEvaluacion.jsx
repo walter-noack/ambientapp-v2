@@ -2,14 +2,15 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getEvaluacionById } from "../services/api";
 import { Loading } from "../components/shared/ui/Loading";
+import { ArrowLeft, FileDown } from "lucide-react";
 
 // Componentes de secciones
 import { SeccionPortada } from "../components/detalle/SeccionPortada";
 import { SeccionResumen } from "../components/detalle/SeccionResumen";
-import { SeccionAnalisis } from "../components/detalle/SeccionAnalisis";
-import { SeccionProximosPasos } from "../components/detalle/SeccionProximosPasos";
 import { SeccionCarbono } from "../components/detalle/SeccionCarbono";
 import { SeccionResiduos } from "../components/detalle/SeccionResiduos";
+import { SeccionAnalisis } from "../components/detalle/SeccionAnalisis";
+import { SeccionProximosPasos } from "../components/detalle/SeccionProximosPasos";
 import { SeccionREP } from "../components/detalle/SeccionREP";
 
 export default function DetalleEvaluacion() {
@@ -52,8 +53,8 @@ export default function DetalleEvaluacion() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* HEADER FIJO CON ACCIONES */}
-      <div className="sticky top-0 z-50 bg-white border-b shadow-sm">
+      {/* HEADER FIJO */}
+      <div className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
           <div>
             <h1 className="text-xl font-bold text-slate-800">
@@ -63,15 +64,17 @@ export default function DetalleEvaluacion() {
           </div>
 
           <div className="flex gap-3">
-            <button className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-semibold text-sm transition-colors">
-              📄 Exportar PDF
+            <button className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-semibold text-sm transition-colors">
+              <FileDown className="w-4 h-4" />
+              <span>Exportar PDF</span>
             </button>
             
             <Link
-              to="/evaluaciones"
-              className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-semibold text-sm transition-colors"
+              to="/dashboard"
+              className="flex items-center gap-2 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-semibold text-sm transition-colors"
             >
-              ← Volver
+              <ArrowLeft className="w-4 h-4" />
+              <span>Volver</span>
             </Link>
           </div>
         </div>
@@ -110,21 +113,11 @@ export default function DetalleEvaluacion() {
       </div>
 
       {/* FOOTER */}
-      <footer className="bg-white border-t mt-16">
+      <footer className="bg-white border-t border-slate-200 mt-16">
         <div className="max-w-5xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">A</span>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-700">
-                  AmbientApp
-                </p>
-                <p className="text-xs text-slate-500">
-                  Diagnóstico Ambiental Empresarial
-                </p>
-              </div>
+            <div className="text-sm text-slate-600">
+              © {new Date().getFullYear()} AmbientApp - Diagnóstico Ambiental Empresarial
             </div>
 
             <p className="text-sm text-slate-500">

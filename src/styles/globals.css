@@ -6,11 +6,12 @@
 
 /* Variables CSS */
 :root {
-  --color-primary: #10b981;
-  --color-primary-dark: #059669;
-  --color-primary-light: #d1fae5;
+  --color-primary: #005429;
+  --color-primary-dark: #004321;
+  --color-primary-light: #e6f2ed;
+  --color-accent: #73c91b;
+  --color-secondary: #0068ec;
 }
-
 * {
   margin: 0;
   padding: 0;

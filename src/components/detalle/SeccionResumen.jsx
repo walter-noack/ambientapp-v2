@@ -1,3 +1,5 @@
+import { Flame, Droplets, Recycle } from 'lucide-react';
+
 export function SeccionResumen({ evaluacion }) {
   const { carbonScore, waterScore, wasteScore } = evaluacion.scores || {};
 
@@ -6,22 +8,22 @@ export function SeccionResumen({ evaluacion }) {
       label: "Carbono",
       valor: carbonScore || 0,
       unidad: "/ 100",
-      color: "#DC2626",
-      icon: "🌍"
+      color: "#ef4444",
+      icon: Flame
     },
     {
       label: "Agua",
       valor: waterScore || 0,
       unidad: "/ 100",
-      color: "#2563EB",
-      icon: "💧"
+      color: "#3b82f6",
+      icon: Droplets
     },
     {
       label: "Residuos",
       valor: wasteScore || 0,
       unidad: "/ 100",
-      color: "#059669",
-      icon: "♻️"
+      color: "#10b981",
+      icon: Recycle
     },
   ];
 
@@ -37,42 +39,47 @@ export function SeccionResumen({ evaluacion }) {
       </div>
 
       <div className="grid md:grid-cols-3 gap-6">
-        {kpis.map((kpi, idx) => (
-          <div 
-            key={idx}
-            className="relative overflow-hidden rounded-xl p-6 bg-gradient-to-br from-slate-50 to-white border-2 hover:shadow-md transition-shadow"
-            style={{ borderColor: kpi.color + '30' }}
-          >
-            {/* Icono de fondo */}
+        {kpis.map((kpi, idx) => {
+          const Icon = kpi.icon;
+          return (
             <div 
-              className="absolute -right-4 -top-4 text-6xl opacity-10"
+              key={idx}
+              className="relative overflow-hidden rounded-xl p-6 bg-slate-50 border-2 hover:shadow-md transition-shadow"
+              style={{ borderColor: kpi.color + '30' }}
             >
-              {kpi.icon}
-            </div>
-
-            {/* Contenido */}
-            <div className="relative">
-              <p className="text-xs uppercase tracking-wider text-slate-500 mb-2">
-                {kpi.label}
-              </p>
-              <div className="flex items-baseline gap-2">
-                <p 
-                  className="text-4xl font-bold"
-                  style={{ color: kpi.color }}
-                >
-                  {kpi.valor}
-                </p>
-                <span className="text-sm text-slate-500">{kpi.unidad}</span>
+              {/* Contenido */}
+              <div className="relative">
+                <div className="flex items-center gap-3 mb-4">
+                  <div 
+                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: kpi.color + '20' }}
+                  >
+                    <Icon className="w-5 h-5" style={{ color: kpi.color }} />
+                  </div>
+                  <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold">
+                    {kpi.label}
+                  </p>
+                </div>
+                
+                <div className="flex items-baseline gap-2">
+                  <p 
+                    className="text-4xl font-bold"
+                    style={{ color: kpi.color }}
+                  >
+                    {kpi.valor}
+                  </p>
+                  <span className="text-sm text-slate-500">{kpi.unidad}</span>
+                </div>
               </div>
-            </div>
 
-            {/* Barra decorativa */}
-            <div 
-              className="absolute bottom-0 left-0 right-0 h-1"
-              style={{ backgroundColor: kpi.color }}
-            />
-          </div>
-        ))}
+              {/* Barra decorativa */}
+              <div 
+                className="absolute bottom-0 left-0 right-0 h-1"
+                style={{ backgroundColor: kpi.color }}
+              />
+            </div>
+          );
+        })}
       </div>
 
       {/* Descripción contextual */}

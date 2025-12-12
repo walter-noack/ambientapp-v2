@@ -1,3 +1,5 @@
+import { Award, Calendar, Building2, Leaf } from 'lucide-react';
+
 export function SeccionPortada({ evaluacion }) {
   // Determinar nivel y color
   let nivel = "Bajo";
@@ -5,87 +7,104 @@ export function SeccionPortada({ evaluacion }) {
 
   if (evaluacion.finalScore >= 75) {
     nivel = "Avanzado";
-    colorNivel = "#2563EB";
+    colorNivel = "#0068ec";
   } else if (evaluacion.finalScore >= 50) {
     nivel = "Intermedio";
-    colorNivel = "#F59E0B";
+    colorNivel = "#73c91b";
   } else if (evaluacion.finalScore >= 25) {
     nivel = "Básico";
-    colorNivel = "#EF4444";
+    colorNivel = "#f59e0b";
   }
 
   return (
-    <div 
-      className="relative overflow-hidden rounded-2xl p-12 shadow-xl"
-      style={{
-        background: `
-          radial-gradient(circle at 20% 10%, rgba(16,185,129,.09), transparent 60%),
-          radial-gradient(circle at 80% 90%, rgba(37,99,235,.08), transparent 60%),
-          white
-        `
-      }}
-    >
-      {/* Logo placeholder */}
-      <div className="mb-8">
-        <div className="w-16 h-16 bg-primary-600 rounded-xl flex items-center justify-center">
-          <span className="text-white font-bold text-2xl">A</span>
-        </div>
-      </div>
-
-      {/* Título principal */}
-      <div className="space-y-2 mb-8">
-        <h1 className="text-5xl font-bold text-slate-900 leading-tight">
-          Diagnóstico Ambiental
-        </h1>
-        <h2 className="text-3xl font-semibold text-slate-700">
-          {evaluacion.companyName}
-        </h2>
-      </div>
-
-      {/* Metadatos */}
-      <div className="flex gap-8 text-sm text-slate-600 mb-12">
-        <div>
-          <p className="uppercase text-xs text-slate-500 tracking-wider mb-1">
-            Período evaluado
-          </p>
-          <p className="font-semibold text-slate-800">{evaluacion.period}</p>
-        </div>
-
-        <div>
-          <p className="uppercase text-xs text-slate-500 tracking-wider mb-1">
-            Fecha de generación
-          </p>
-          <p className="font-semibold text-slate-800">
-            {new Date().toLocaleDateString("es-CL", { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
-          </p>
-        </div>
-      </div>
-
-      {/* Badge de nivel - posicionado absolutamente */}
+    <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-lg">
+      
+      {/* Background pattern sutil */}
       <div 
-        className="absolute bottom-8 right-8 px-8 py-6 rounded-2xl shadow-lg"
-        style={{ 
-          backgroundColor: colorNivel + '15',
-          border: `3px solid ${colorNivel}`
+        className="absolute inset-0 opacity-5"
+        style={{
+          backgroundImage: `radial-gradient(circle at 2px 2px, ${colorNivel} 1px, transparent 0)`,
+          backgroundSize: '32px 32px'
         }}
-      >
-        <p className="text-sm text-slate-600 mb-2">Nivel Ambiental</p>
-        <p 
-          className="text-5xl font-bold mb-2"
-          style={{ color: colorNivel }}
+      />
+
+      <div className="relative p-12">
+        
+        {/* Badge de nivel - esquina superior derecha */}
+        <div 
+          className="absolute top-8 right-8 px-6 py-4 rounded-xl shadow-lg border-2 bg-white"
+          style={{ 
+            borderColor: colorNivel
+          }}
         >
-          {Number(evaluacion.finalScore).toFixed(1)}
-        </p>
-        <p 
-          className="text-lg font-semibold uppercase tracking-wide"
-          style={{ color: colorNivel }}
-        >
-          {nivel}
-        </p>
+          <div className="flex items-center gap-2 mb-2">
+            <Award className="w-4 h-4" style={{ color: colorNivel }} />
+            <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">Nivel Ambiental</p>
+          </div>
+          <p 
+            className="text-3xl font-bold mb-1"
+            style={{ color: colorNivel }}
+          >
+            {Number(evaluacion.finalScore).toFixed(1)}
+          </p>
+          <p 
+            className="text-sm font-semibold uppercase tracking-wide"
+            style={{ color: colorNivel }}
+          >
+            {nivel}
+          </p>
+        </div>
+
+        {/* Logo */}
+        <div className="mb-8">
+          <div className="w-16 h-16 bg-gradient-to-br from-primary-600 to-primary-700 rounded-2xl flex items-center justify-center shadow-lg">
+            <Leaf className="w-10 h-10 text-white" />
+          </div>
+        </div>
+
+        {/* Título principal */}
+        <div className="space-y-2 mb-8">
+          <h1 className="text-5xl font-bold text-slate-900 leading-tight">
+            Diagnóstico Ambiental
+          </h1>
+          <h2 className="text-3xl font-semibold text-slate-700">
+            {evaluacion.companyName}
+          </h2>
+        </div>
+
+        {/* Metadatos en grid */}
+        <div className="grid grid-cols-2 gap-6">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Calendar className="w-5 h-5 text-slate-600" />
+            </div>
+            <div>
+              <p className="text-xs uppercase text-slate-500 tracking-wider mb-1">
+                Período evaluado
+              </p>
+              <p className="font-semibold text-slate-800">{evaluacion.period}</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Building2 className="w-5 h-5 text-slate-600" />
+            </div>
+            <div>
+              <p className="text-xs uppercase text-slate-500 tracking-wider mb-1">
+                Fecha de generación
+              </p>
+              <p className="font-semibold text-slate-800">
+                {new Date().toLocaleDateString("es-CL", { 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </p>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );

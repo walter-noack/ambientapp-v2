@@ -1,5 +1,6 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { LogOut, LayoutDashboard, FileText, Leaf } from 'lucide-react';
 
 export default function MainLayout() {
   const { user, logout } = useAuth();
@@ -16,56 +17,64 @@ export default function MainLayout() {
   };
 
   const navLinkClass = (path) => {
-    return `px-4 py-2 rounded-lg font-medium transition-colors ${
+    return `flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
       isActive(path)
-        ? 'bg-primary-100 text-primary-700'
-        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+        ? 'bg-primary-500 text-white'
+        : 'text-slate-700 hover:bg-slate-100'
     }`;
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* NAVBAR */}
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="container-app">
           <div className="flex items-center justify-between h-16">
             
             {/* Logo */}
             <Link to="/dashboard" className="flex items-center gap-3 group">
-              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">A</span>
+              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
+                <Leaf className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold text-slate-900">
-                AmbientApp
-              </span>
+              <div className="flex flex-col">
+                <span className="text-xl font-bold text-slate-900 leading-none">
+                  AmbientApp
+                </span>
+                <span className="text-xs text-slate-500">
+                  Diagnóstico Ambiental
+                </span>
+              </div>
             </Link>
 
             {/* Navigation Links */}
             <div className="hidden md:flex items-center gap-2">
               <Link to="/dashboard" className={navLinkClass('/dashboard')}>
-                Dashboard
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Dashboard</span>
               </Link>
               <Link to="/evaluaciones" className={navLinkClass('/evaluaciones')}>
-                Evaluaciones
+                <FileText className="w-4 h-4" />
+                <span>Evaluaciones</span>
               </Link>
             </div>
 
             {/* User Menu */}
-            <div className="flex items-center gap-4">
-              <div className="hidden md:flex items-center gap-2 text-sm text-slate-600">
+            <div className="flex items-center gap-3">
+              <div className="hidden md:flex items-center gap-2 text-sm">
                 <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-                  <span className="text-primary-700 font-semibold">
+                  <span className="text-primary-700 font-semibold text-sm">
                     {user?.email?.[0]?.toUpperCase() || 'U'}
                   </span>
                 </div>
-                <span className="font-medium">{user?.email}</span>
+                <span className="font-medium text-slate-700">{user?.email}</span>
               </div>
               
               <button
                 onClick={handleLogout}
-                className="btn-secondary text-sm"
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
               >
-                Cerrar sesión
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Salir</span>
               </button>
             </div>
           </div>
@@ -81,8 +90,13 @@ export default function MainLayout() {
       <footer className="bg-white border-t border-slate-200 mt-auto">
         <div className="container-app py-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-sm text-slate-500">
-              © {new Date().getFullYear()} AmbientApp. Todos los derechos reservados.
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
+                <Leaf className="w-5 h-5 text-white" />
+              </div>
+              <div className="text-sm text-slate-600">
+                © {new Date().getFullYear()} AmbientApp. Todos los derechos reservados.
+              </div>
             </div>
             <div className="flex gap-6 text-sm text-slate-600">
               <a href="#" className="hover:text-primary-600 transition-colors">

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getEvaluaciones } from "../services/api";
-import { KPICard } from "../components/dashboard/KPICard";
-import { DimensionCard } from "../components/dashboard/DimensionCard";
 import { Loading } from "../components/shared/ui/Loading";
 import { Badge } from "../components/shared/ui/Badge";
+import { Card } from "../components/shared/ui/Card";
+import { BarChart3, TrendingUp, Calendar, Plus, Eye, Flame, Droplets, Recycle } from "lucide-react";
 
 export default function Dashboard() {
   const [evaluaciones, setEvaluaciones] = useState([]);
@@ -23,12 +23,10 @@ export default function Dashboard() {
       try {
         const data = await getEvaluaciones();
 
-        // Ordenar por fecha descendente
         const ordenadas = [...data].sort(
           (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
         );
 
-        // Tomar solo las últimas 10
         const ultimas10 = ordenadas.slice(0, 10);
         setEvaluaciones(ultimas10);
 
@@ -38,13 +36,11 @@ export default function Dashboard() {
             ? data.reduce((acc, e) => acc + (e.finalScore || 0), 0) / total
             : 0;
 
-        // Última fecha
         const fechas = data
           .map((ev) => new Date(ev.createdAt))
           .sort((a, b) => b - a);
         const ultimaFecha = fechas[0]?.toLocaleDateString("es-CL") || "-";
 
-        // Promedios por dimensión
         const promCarbono =
           total > 0
             ? data.reduce((acc, e) => acc + (e.scores?.carbonScore || 0), 0) / total
@@ -88,8 +84,8 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* HEADER CON GRADIENTE */}
-      <div className="bg-gradient-to-r from-primary-600 to-emerald-600 text-white">
+      {/* HEADER */}
+      <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white">
         <div className="container-app py-12">
           <div className="flex justify-between items-start">
             <div>
@@ -101,9 +97,10 @@ export default function Dashboard() {
 
             <Link
               to="/evaluaciones/nueva"
-              className="px-6 py-3 bg-white text-primary-600 rounded-xl font-semibold hover:bg-primary-50 transition-colors shadow-lg"
+              className="flex items-center gap-2 px-6 py-3 bg-white text-primary-600 rounded-xl font-semibold hover:bg-primary-50 transition-colors shadow-lg"
             >
-              + Nuevo Diagnóstico
+              <Plus className="w-5 h-5" />
+              <span>Nuevo Diagnóstico</span>
             </Link>
           </div>
         </div>
@@ -112,31 +109,64 @@ export default function Dashboard() {
       <div className="container-app py-8 space-y-8">
         
         {/* KPIs PRINCIPALES */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
-          <KPICard
-            title="Total Diagnósticos"
-            value={kpis.total}
-            subtitle={`Última actualización: ${kpis.ultimaFecha}`}
-            color="#10b981"
-            icon="📊"
-          />
+          <Card className="p-6 border-l-4 border-l-primary-500">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-2">
+                  Total Diagnósticos
+                </p>
+                <p className="text-4xl font-bold text-slate-900 mb-1">
+                  {kpis.total}
+                </p>
+                <p className="text-xs text-slate-500">
+                  Última actualización: {kpis.ultimaFecha}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
+                <BarChart3 className="w-6 h-6 text-primary-600" />
+              </div>
+            </div>
+          </Card>
 
-          <KPICard
-            title="Nivel Promedio"
-            value={kpis.nivelPromedio.toFixed(1)}
-            subtitle="/ 100"
-            color="#2563EB"
-            icon="📈"
-          />
+          <Card className="p-6 border-l-4 border-l-secondary-500">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-2">
+                  Nivel Promedio
+                </p>
+                <p className="text-4xl font-bold text-slate-900 mb-1">
+                  {kpis.nivelPromedio.toFixed(1)}
+                </p>
+                <p className="text-xs text-slate-500">
+                  / 100 puntos
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-secondary-100 rounded-xl flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-secondary-600" />
+              </div>
+            </div>
+          </Card>
 
-          <KPICard
-            title="Última Evaluación"
-            value={kpis.ultimaFecha}
-            subtitle="Fecha más reciente"
-            color="#8B5CF6"
-            icon="📅"
-          />
+          <Card className="p-6 border-l-4 border-l-accent-500">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-2">
+                  Última Evaluación
+                </p>
+                <p className="text-2xl font-bold text-slate-900 mb-1">
+                  {kpis.ultimaFecha}
+                </p>
+                <p className="text-xs text-slate-500">
+                  Fecha más reciente
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-accent-100 rounded-xl flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-accent-600" />
+              </div>
+            </div>
+          </Card>
 
         </div>
 
@@ -147,35 +177,80 @@ export default function Dashboard() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
-            <DimensionCard
-              titulo="Carbono"
-              valor={kpis.promCarbono}
-              color="#DC2626"
-              icon="🌍"
-              descripcion="Gestión de emisiones GEI"
-            />
+            <Card hover className="p-6 border-l-4 border-l-red-500">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-slate-500 mb-1">
+                    Carbono
+                  </p>
+                  <p className="text-4xl font-bold text-slate-900">
+                    {kpis.promCarbono.toFixed(1)}
+                  </p>
+                </div>
+                <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                  <Flame className="w-5 h-5 text-red-600" />
+                </div>
+              </div>
+              <p className="text-xs text-slate-600 mb-3">Gestión de emisiones GEI</p>
+              <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-red-500 rounded-full transition-all duration-500"
+                  style={{ width: `${kpis.promCarbono}%` }}
+                />
+              </div>
+            </Card>
 
-            <DimensionCard
-              titulo="Agua"
-              valor={kpis.promAgua}
-              color="#2563EB"
-              icon="💧"
-              descripcion="Eficiencia hídrica"
-            />
+            <Card hover className="p-6 border-l-4 border-l-blue-500">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-slate-500 mb-1">
+                    Agua
+                  </p>
+                  <p className="text-4xl font-bold text-slate-900">
+                    {kpis.promAgua.toFixed(1)}
+                  </p>
+                </div>
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Droplets className="w-5 h-5 text-blue-600" />
+                </div>
+              </div>
+              <p className="text-xs text-slate-600 mb-3">Eficiencia hídrica</p>
+              <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                  style={{ width: `${kpis.promAgua}%` }}
+                />
+              </div>
+            </Card>
 
-            <DimensionCard
-              titulo="Residuos"
-              valor={kpis.promResiduos}
-              color="#059669"
-              icon="♻️"
-              descripcion="Valorización y gestión"
-            />
+            <Card hover className="p-6 border-l-4 border-l-green-500">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-slate-500 mb-1">
+                    Residuos
+                  </p>
+                  <p className="text-4xl font-bold text-slate-900">
+                    {kpis.promResiduos.toFixed(1)}
+                  </p>
+                </div>
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Recycle className="w-5 h-5 text-green-600" />
+                </div>
+              </div>
+              <p className="text-xs text-slate-600 mb-3">Valorización y gestión</p>
+              <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-green-500 rounded-full transition-all duration-500"
+                  style={{ width: `${kpis.promResiduos}%` }}
+                />
+              </div>
+            </Card>
 
           </div>
         </div>
 
         {/* TABLA DE ÚLTIMOS DIAGNÓSTICOS */}
-        <div className="card p-6">
+        <Card className="p-6">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-slate-900">
               Últimos 10 Diagnósticos
@@ -192,7 +267,7 @@ export default function Dashboard() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-100 text-slate-600 text-sm">
+                <thead className="bg-slate-50 text-slate-600 text-sm border-y border-slate-200">
                   <tr>
                     <th className="text-left py-4 px-6 font-semibold">Empresa</th>
                     <th className="text-left py-4 px-6 font-semibold">Período</th>
@@ -204,7 +279,6 @@ export default function Dashboard() {
 
                 <tbody className="divide-y divide-slate-200">
                   {evaluaciones.map((ev) => {
-                    // Determinar nivel y color
                     let nivel = "bajo";
                     if (ev.finalScore >= 75) nivel = "avanzado";
                     else if (ev.finalScore >= 50) nivel = "intermedio";
@@ -231,7 +305,8 @@ export default function Dashboard() {
                             to={`/detalle/${ev._id}`}
                             className="inline-flex items-center gap-2 px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors font-semibold text-sm"
                           >
-                            Ver detalle →
+                            <Eye className="w-4 h-4" />
+                            <span>Ver detalle</span>
                           </Link>
                         </td>
                       </tr>
@@ -241,7 +316,7 @@ export default function Dashboard() {
               </table>
             </div>
           )}
-        </div>
+        </Card>
 
       </div>
     </div>
