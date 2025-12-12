@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/shared/ui/Button';
 import { Card } from '../components/shared/ui/Card';
+import { getEvaluacionById } from '../services/api';
 
 import { Paso1InfoGeneral } from '../components/formulario/Paso1InfoGeneral';
 import { Paso2HuellaCarbono } from '../components/formulario/Paso2HuellaCarbono';
@@ -10,11 +11,11 @@ import { Paso4GestionResiduos } from '../components/formulario/Paso4GestionResid
 import { Paso5ProductosREP } from '../components/formulario/Paso5ProductosREP';
 import { Paso6Revision } from '../components/formulario/Paso6Revision';
 
-export default function NuevaEvaluacion() {
+export default function NuevaEvaluacion({ modoEdicion = false, modoDuplicar = false }) {
+  const { id } = useParams();
   const navigate = useNavigate();
-
-  // Estado del formulario
   const [currentStep, setCurrentStep] = useState(1);
+  const [cargandoDatos, setCargandoDatos] = useState(modoEdicion);
   const [formData, setFormData] = useState({
     // Paso 1: Información General
     companyName: '',
@@ -59,6 +60,74 @@ export default function NuevaEvaluacion() {
 
   // Errores de validación
   const [errors, setErrors] = useState({});
+
+  // Cargar datos si estamos en modo edición
+  useEffect(() => {
+    if (modoEdicion || modoDuplicar && id) {
+      async function cargarEvaluacion() {
+        try {
+          const evaluacion = await getEvaluacionById(id);
+          console.log('📋 Datos de diagnóstico cargado:', evaluacion);
+
+          // Mapear datos del diagnóstico al formato del formulario
+          setFormData({
+            companyName: modoDuplicar
+              ? `${evaluacion.companyName} (Copia)`
+              : evaluacion.companyName || '',
+            semestre: evaluacion.period?.includes('S1') ? 'S1' : evaluacion.period?.includes('Q1') || evaluacion.period?.includes('Q2') ? 'S1' : 'S2',
+            anio: parseInt(evaluacion.period?.match(/\d{4}/)?.[0]) || new Date().getFullYear(),
+            fechaEvaluacion: new Date().toISOString().split('T')[0],
+
+            dimensiones: {
+              carbono: !!(evaluacion.alcance1 || evaluacion.alcance2),
+              agua: false, // No hay datos de agua en los datos fake
+              residuos: !!(evaluacion.residuosGenerados),
+              rep: !!(evaluacion.productosREP?.length)
+            },
+
+            carbono: {
+              diesel: '',
+              bencina: '',
+              gasNatural: '',
+              otrosCombustibles: '',
+              electricidad: ''
+              // NOTA: Los datos fake solo tienen alcance1/alcance2 calculados,
+              // no los consumos individuales. En producción con backend real,
+              // estos campos se llenarían.
+            },
+
+            agua: {
+              consumoTotal: '',
+              tipoMedicion: 'persona',
+              numeroTrabajadores: '',
+              produccionAnual: ''
+              // NOTA: Los datos fake no tienen información de agua
+            },
+
+            residuos: {
+              generados: evaluacion.residuosGenerados ? String(evaluacion.residuosGenerados) : '',
+              valorizados: evaluacion.residuosValorizados ? String(evaluacion.residuosValorizados) : ''
+            },
+
+            productosREP: Array.isArray(evaluacion.productosREP) ? evaluacion.productosREP.map(p => ({
+              categoria: p.categoria || p.producto || '',
+              subCategoria: p.subCategoria || '',
+              cantidadGenerada: p.cantidadGenerada || 0,
+              cantidadValorizada: p.cantidadValorizada || 0
+            })) : []
+          });
+
+          setCargandoDatos(false);
+        } catch (error) {
+          console.error('Error cargando diagnóstico:', error);
+          alert('Error al cargar los datos del diagnóstico');
+          setCargandoDatos(false);
+        }
+      }
+
+      cargarEvaluacion();
+    }
+  }, [modoEdicion, id]);
 
   // Función para actualizar formData
   const updateFormData = (section, field, value) => {
@@ -121,10 +190,22 @@ export default function NuevaEvaluacion() {
 
   const handleSubmit = async () => {
     console.log('Datos finales:', formData);
-    // Aquí irá la llamada al API
-    alert('¡Evaluación guardada! (Modo demo)');
+    // TODO: Implementar guardado real con API
+    alert(modoEdicion ? '¡Diagnóstico actualizado! (Modo demo)' : '¡Diagnóstico guardado! (Modo demo)');
     navigate('/dashboard');
   };
+
+  // Loading mientras carga datos en modo edición
+  if (cargandoDatos) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
+          <p className="text-slate-600">Cargando diagnóstico...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 py-8">
@@ -132,9 +213,19 @@ export default function NuevaEvaluacion() {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">Nueva Evaluación Ambiental</h1>
+          <h1 className="text-3xl font-bold text-slate-900">
+            {modoEdicion
+              ? 'Editar Diagnóstico Ambiental'
+              : modoDuplicar
+                ? 'Duplicar Diagnóstico Ambiental'
+                : 'Nueva Diagnóstico Ambiental'}
+          </h1>
           <p className="text-slate-600 mt-2">
-            Completa el diagnóstico ambiental de tu empresa
+            {modoEdicion
+              ? 'Modifica los datos del diagnóstico ambiental'
+              : modoDuplicar
+                ? 'Revisa y ajusta los datos copiados antes de guardar'
+                : 'Completa el diagnóstico ambiental de tu empresa'}
           </p>
         </div>
 
@@ -182,7 +273,8 @@ export default function NuevaEvaluacion() {
         {/* Formulario */}
         <Card className="p-8">
           <div className="min-h-[400px]">
-            {currentStep === 1 && (
+            {/* Paso 1 - Información General */}
+            {activeSteps[currentStep - 1]?.name === 'Información General' && (
               <Paso1InfoGeneral
                 formData={formData}
                 updateField={updateField}
@@ -191,7 +283,8 @@ export default function NuevaEvaluacion() {
               />
             )}
 
-            {currentStep === 2 && activeSteps[1]?.name === 'Huella de Carbono' && (
+            {/* Paso 2 - Huella de Carbono */}
+            {activeSteps[currentStep - 1]?.name === 'Huella de Carbono' && (
               <Paso2HuellaCarbono
                 formData={formData}
                 updateFormData={updateFormData}
@@ -199,7 +292,8 @@ export default function NuevaEvaluacion() {
               />
             )}
 
-            {currentStep === 3 && activeSteps[currentStep - 1]?.name === 'Gestión del Agua' && (
+            {/* Paso 3 - Gestión del Agua */}
+            {activeSteps[currentStep - 1]?.name === 'Gestión del Agua' && (
               <Paso3GestionAgua
                 formData={formData}
                 updateFormData={updateFormData}
@@ -207,7 +301,8 @@ export default function NuevaEvaluacion() {
               />
             )}
 
-            {currentStep === 4 && activeSteps[currentStep - 1]?.name === 'Gestión de Residuos' && (
+            {/* Paso 4 - Gestión de Residuos */}
+            {activeSteps[currentStep - 1]?.name === 'Gestión de Residuos' && (
               <Paso4GestionResiduos
                 formData={formData}
                 updateFormData={updateFormData}
@@ -215,7 +310,8 @@ export default function NuevaEvaluacion() {
               />
             )}
 
-            {currentStep === 5 && activeSteps[currentStep - 1]?.name === 'Productos REP' && (
+            {/* Paso 5 - Productos REP */}
+            {activeSteps[currentStep - 1]?.name === 'Productos REP' && (
               <Paso5ProductosREP
                 formData={formData}
                 updateField={updateField}
@@ -223,18 +319,9 @@ export default function NuevaEvaluacion() {
               />
             )}
 
-            {currentStep === 6 && activeSteps[currentStep - 1]?.name === 'Revisión' && (
+            {/* Paso 6 - Revisión */}
+            {activeSteps[currentStep - 1]?.name === 'Revisión' && (
               <Paso6Revision formData={formData} />
-            )}
-
-            {currentStep > 6 && (
-              <p className="text-slate-600">
-                Paso {currentStep}: {activeSteps[currentStep - 1]?.name}
-                <br />
-                <span className="text-sm text-slate-500">
-                  (Este paso no debería aparecer)
-                </span>
-              </p>
             )}
           </div>
 
@@ -255,7 +342,7 @@ export default function NuevaEvaluacion() {
 
               {currentStep === totalSteps ? (
                 <Button variant="primary" onClick={handleSubmit}>
-                  Finalizar Evaluación
+                  {modoEdicion ? 'Actualizar Diagnóstico' : 'Finalizar Diagnóstico'}
                 </Button>
               ) : (
                 <Button variant="primary" onClick={goToNextStep}>

@@ -80,8 +80,9 @@ export default function AppRouter() {
 
         {/* Evaluaciones */}
         <Route path="evaluaciones" element={<ListaEvaluaciones />} />
-        <Route path="evaluaciones/nueva" element={<NuevaEvaluacion />} />
-        <Route path="evaluaciones/:id/editar" element={<EditarEvaluacion />} />
+        <Route path="/evaluaciones/nueva" element={<NuevaEvaluacion />} />
+        <Route path="/evaluaciones/editar/:id" element={<NuevaEvaluacion modoEdicion={true} />} />
+        <Route path="/evaluaciones/duplicar/:id" element={<NuevaEvaluacion modoDuplicar={true} />}/>
 
         {/* Detalle */}
         <Route path="detalle/:id" element={<DetalleEvaluacion />} />

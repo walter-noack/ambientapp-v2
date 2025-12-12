@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { getEvaluaciones } from "../services/api";
+import { Link, useNavigate } from "react-router-dom";
 import { Loading } from "../components/shared/ui/Loading";
 import { Badge } from "../components/shared/ui/Badge";
 import { Card } from "../components/shared/ui/Card";
 import { BarChart3, TrendingUp, Calendar, Plus, Eye, Flame, Droplets, Recycle } from "lucide-react";
+import { Edit2, Copy, Trash2 } from 'lucide-react';
+import { getEvaluaciones, eliminarEvaluacion } from "../services/api";
+
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [evaluaciones, setEvaluaciones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState({
@@ -22,6 +25,7 @@ export default function Dashboard() {
     async function load() {
       try {
         const data = await getEvaluaciones();
+        
 
         const ordenadas = [...data].sort(
           (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
@@ -73,6 +77,55 @@ export default function Dashboard() {
 
     load();
   }, []);
+const handleDuplicar = (id) => {
+  if (window.confirm('¿Deseas duplicar esta evaluación?')) {
+    navigate(`/evaluaciones/duplicar/${id}`);
+  }
+};
+
+const handleEliminar = async (id) => {
+  if (window.confirm('¿Estás seguro de eliminar esta evaluación? Esta acción no se puede deshacer.')) {
+    try {
+      await eliminarEvaluacion(id);
+      
+      // Actualizar lista eliminando el item
+      setEvaluaciones(prev => prev.filter(ev => ev._id !== id));
+      
+      // Recalcular KPIs
+      const nuevasEvaluaciones = evaluaciones.filter(ev => ev._id !== id);
+      const total = nuevasEvaluaciones.length;
+      
+      if (total > 0) {
+        const nivelPromedio = nuevasEvaluaciones.reduce((acc, e) => acc + (e.finalScore || 0), 0) / total;
+        const promCarbono = nuevasEvaluaciones.reduce((acc, e) => acc + (e.scores?.carbonScore || 0), 0) / total;
+        const promAgua = nuevasEvaluaciones.reduce((acc, e) => acc + (e.scores?.waterScore || 0), 0) / total;
+        const promResiduos = nuevasEvaluaciones.reduce((acc, e) => acc + (e.scores?.wasteScore || 0), 0) / total;
+        
+        setKpis(prev => ({
+          ...prev,
+          total,
+          nivelPromedio,
+          promCarbono,
+          promAgua,
+          promResiduos
+        }));
+      } else {
+        setKpis({
+          total: 0,
+          nivelPromedio: 0,
+          ultimaFecha: null,
+          promCarbono: 0,
+          promAgua: 0,
+          promResiduos: 0,
+        });
+      }
+      
+      alert('Evaluación eliminada correctamente');
+    } catch (error) {
+      alert('Error al eliminar la evaluación. Intenta nuevamente.');
+    }
+  }
+};
 
   if (loading) {
     return (
@@ -81,6 +134,8 @@ export default function Dashboard() {
       </div>
     );
   }
+
+
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -107,10 +162,10 @@ export default function Dashboard() {
       </div>
 
       <div className="container-app py-8 space-y-8">
-        
+
         {/* KPIs PRINCIPALES */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
+
           <Card className="p-6 border-l-4 border-l-primary-500">
             <div className="flex items-start justify-between">
               <div>
@@ -176,7 +231,7 @@ export default function Dashboard() {
             Desempeño por Dimensión
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
+
             <Card hover className="p-6 border-l-4 border-l-red-500">
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -300,15 +355,45 @@ export default function Dashboard() {
                             {nivel.charAt(0).toUpperCase() + nivel.slice(1)}
                           </Badge>
                         </td>
-                        <td className="py-4 px-6 text-center">
-                          <Link
-                            to={`/detalle/${ev._id}`}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors font-semibold text-sm"
-                          >
-                            <Eye className="w-4 h-4" />
-                            <span>Ver detalle</span>
-                          </Link>
+
+                        <td className="py-4 px-6">
+                          <div className="flex items-center justify-center gap-2">
+                            <Link
+                              to={`/detalle/${ev._id}`}
+                              className="inline-flex items-center gap-2 px-3 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors font-semibold text-sm"
+                              title="Ver detalle"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Link>
+
+                            <Link
+                              to={`/evaluaciones/editar/${ev._id}`}
+                              className="inline-flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-semibold text-sm"
+                              title="Editar"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Link>
+
+                            <button
+                              onClick={() => handleDuplicar(ev._id)}
+                              className="inline-flex items-center gap-2 px-3 py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors font-semibold text-sm"
+                              title="Duplicar"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </button>
+
+                            <button
+                              onClick={() => handleEliminar(ev._id)}
+                              className="inline-flex items-center gap-2 px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-semibold text-sm"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
+
+
+
                       </tr>
                     );
                   })}

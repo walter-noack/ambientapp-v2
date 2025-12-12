@@ -218,4 +218,32 @@ export const deleteResiduoRep = async (id) => {
   return response.data;
 };
 
+export async function eliminarEvaluacion(id) {
+  // TODO: Descomentar cuando el backend esté disponible
+  /*
+  try {
+    const response = await fetch(`${API_URL}/evaluaciones/${id}`, {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      throw new Error('Error al eliminar evaluación');
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error eliminando evaluación:', error);
+    throw error;
+  }
+  */
+  
+  // SIMULACIÓN: Solo retornar éxito sin llamar al backend
+  console.log('🎭 SIMULANDO eliminación de evaluación:', id);
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({ success: true });
+    }, 500);
+  });
+}
+
 export default api;

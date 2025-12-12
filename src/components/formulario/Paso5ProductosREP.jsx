@@ -12,6 +12,7 @@ export function Paso5ProductosREP({ formData, updateField, errors }) {
   });
 
   const [showForm, setShowForm] = useState(false);
+  const [editandoIndex, setEditandoIndex] = useState(null);
 
   const categoriasREP = [
     'Aceites Lubricantes',
@@ -41,7 +42,6 @@ export function Paso5ProductosREP({ formData, updateField, errors }) {
       return;
     }
 
-    // Agregar a la lista
     const producto = {
       categoria: nuevoProducto.categoria,
       subCategoria: nuevoProducto.subCategoria.trim(),
@@ -49,7 +49,16 @@ export function Paso5ProductosREP({ formData, updateField, errors }) {
       cantidadValorizada: parseDecimalInput(nuevoProducto.cantidadValorizada),
     };
 
-    updateField('productosREP', [...formData.productosREP, producto]);
+    // Si estamos editando, actualizar el producto existente
+    if (editandoIndex !== null) {
+      const nuevaLista = [...formData.productosREP];
+      nuevaLista[editandoIndex] = producto;
+      updateField('productosREP', nuevaLista);
+      setEditandoIndex(null);
+    } else {
+      // Si no, agregar nuevo producto
+      updateField('productosREP', [...formData.productosREP, producto]);
+    }
 
     // Limpiar formulario
     setNuevoProducto({
@@ -61,9 +70,27 @@ export function Paso5ProductosREP({ formData, updateField, errors }) {
     setShowForm(false);
   };
 
-  const eliminarProducto = (index) => {
-    const nuevaLista = formData.productosREP.filter((_, i) => i !== index);
-    updateField('productosREP', nuevaLista);
+  const editarProducto = (index) => {
+    const producto = formData.productosREP[index];
+    setNuevoProducto({
+      categoria: producto.categoria,
+      subCategoria: producto.subCategoria,
+      cantidadGenerada: String(producto.cantidadGenerada),
+      cantidadValorizada: String(producto.cantidadValorizada),
+    });
+    setEditandoIndex(index);
+    setShowForm(true);
+  };
+
+  const cancelarEdicion = () => {
+    setNuevoProducto({
+      categoria: '',
+      subCategoria: '',
+      cantidadGenerada: '',
+      cantidadValorizada: '',
+    });
+    setEditandoIndex(null);
+    setShowForm(false);
   };
 
   // Calcular totales
@@ -73,7 +100,7 @@ export function Paso5ProductosREP({ formData, updateField, errors }) {
 
   return (
     <div className="space-y-8">
-      
+
       <div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">
           Productos Prioritarios — Ley REP
@@ -142,11 +169,11 @@ export function Paso5ProductosREP({ formData, updateField, errors }) {
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="mb-2">
-                        <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-semibold mr-2">
+                        <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-semibold">
                           {producto.categoria}
                         </span>
-                        <p className="font-semibold text-slate-900 inline">
-                          {producto.subCategoria}
+                        <p className="font-semibold text-slate-900 mb-2">
+                          {producto.subCategoria || producto.producto || 'Sin especificar'}
                         </p>
                       </div>
                       <div className="grid grid-cols-3 gap-4 text-sm">
@@ -171,14 +198,22 @@ export function Paso5ProductosREP({ formData, updateField, errors }) {
                       </div>
                     </div>
 
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => eliminarProducto(idx)}
-                      className="ml-4"
-                    >
-                      Eliminar
-                    </Button>
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => editarProducto(idx)}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => eliminarProducto(idx)}
+                      >
+                        Eliminar
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );
@@ -199,7 +234,7 @@ export function Paso5ProductosREP({ formData, updateField, errors }) {
       ) : (
         <div className="border-2 border-purple-300 rounded-xl p-6 bg-gradient-to-br from-purple-50 to-white">
           <h3 className="text-lg font-bold text-slate-900 mb-4">
-            Nuevo Producto REP
+            {editandoIndex !== null ? 'Editar Producto REP' : 'Nuevo Producto REP'}
           </h3>
 
           <div className="space-y-4">
@@ -229,7 +264,7 @@ export function Paso5ProductosREP({ formData, updateField, errors }) {
 
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-xs text-blue-800">
-                💡 <strong>Ejemplos:</strong> Si seleccionaste "Envases y Embalajes", especifica el tipo: 
+                💡 <strong>Ejemplos:</strong> Si seleccionaste "Envases y Embalajes", especifica el tipo:
                 "Plástico PET", "Cartón", "Vidrio", "Latas de aluminio", etc.
               </p>
             </div>
@@ -256,10 +291,7 @@ export function Paso5ProductosREP({ formData, updateField, errors }) {
             <div className="flex gap-3">
               <Button
                 variant="secondary"
-                onClick={() => {
-                  setShowForm(false);
-                  setNuevoProducto({ categoria: '', subCategoria: '', cantidadGenerada: '', cantidadValorizada: '' });
-                }}
+                onClick={cancelarEdicion}
                 className="flex-1"
               >
                 Cancelar
@@ -269,7 +301,7 @@ export function Paso5ProductosREP({ formData, updateField, errors }) {
                 onClick={agregarProducto}
                 className="flex-1"
               >
-                Agregar
+                {editandoIndex !== null ? 'Guardar Cambios' : 'Agregar'}
               </Button>
             </div>
           </div>
@@ -279,8 +311,8 @@ export function Paso5ProductosREP({ formData, updateField, errors }) {
       {/* Info sobre Ley REP */}
       <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
         <p className="text-sm text-blue-900 leading-relaxed">
-          📋 <strong>Ley REP:</strong> La Responsabilidad Extendida del Productor establece que los fabricantes e importadores 
-          deben gestionar los residuos de productos prioritarios. Los 6 productos incluidos son: aceites lubricantes, 
+          📋 <strong>Ley REP:</strong> La Responsabilidad Extendida del Productor establece que los fabricantes e importadores
+          deben gestionar los residuos de productos prioritarios. Los 6 productos incluidos son: aceites lubricantes,
           aparatos eléctricos y electrónicos (RAEE), baterías, envases y embalajes, neumáticos y pilas.
         </p>
       </div>
