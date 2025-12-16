@@ -66,14 +66,8 @@ export default function AppRouter() {
       />
 
       {/* Rutas protegidas con layout */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <MainLayout />
-          </ProtectedRoute>
-        }
-      >
+      <Route path="/" element={<ProtectedRoute> <MainLayout /> </ProtectedRoute>}>
+
         {/* Dashboard */}
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />

@@ -1,6 +1,6 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, LayoutDashboard, FileText, Leaf } from 'lucide-react';
+import { LogOut, LayoutDashboard, FileText, Info } from 'lucide-react';
 
 export default function MainLayout() {
   const { user, logout } = useAuth();
@@ -56,6 +56,10 @@ export default function MainLayout() {
               <Link to="/evaluaciones" className={navLinkClass('/evaluaciones')}>
                 <FileText className="w-4 h-4" />
                 <span>Evaluaciones</span>
+              </Link>
+              <Link to="/acerca-de" className={navLinkClass('/acerca-de')}>
+                <Info className="w-4 h-4" />
+                <span>Acerca de</span>
               </Link>
             </div>
 

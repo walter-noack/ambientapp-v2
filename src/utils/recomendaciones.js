@@ -225,3 +225,77 @@ export function generarRecomendacionesIntegradas(evaluacion) {
 
   return todas;
 }
+
+
+// ============================================
+// FUNCIÓN ADAPTADA PARA InformePDF.jsx
+// ============================================
+
+/**
+ * Función compatible con InformePDF.jsx
+ * Convierte el formato de recomendaciones al esperado por el componente PDF
+ */
+export function generarRecomendacionesPriorizadas(evaluacion) {
+  const recomendaciones = generarRecomendacionesIntegradas(evaluacion);
+  
+  // Mapear prioridades al formato esperado por InformePDF
+  const mapPrioridad = {
+    'alta': 1,      // Crítica
+    'media': 2,     // Alta
+    'baja': 3       // Media
+  };
+  
+  // Mapear impacto al formato esperado
+  const getImpacto = (rec) => {
+    if (rec.prioridad === 'alta') return 'Alto';
+    if (rec.prioridad === 'media') return 'Medio';
+    return 'Bajo';
+  };
+  
+  // Mapear facilidad al formato esperado
+  const getFacilidad = (rec) => {
+    if (rec.plazo.includes('Inmediato') || rec.plazo.includes('1 mes')) return 'Alta';
+    if (rec.plazo.includes('3 meses') || rec.plazo.includes('6 meses')) return 'Media';
+    return 'Baja';
+  };
+  
+  // Mapear dimensión al icono
+  const getDimension = (rec) => {
+    if (rec.titulo.toLowerCase().includes('carbono') || 
+        rec.titulo.toLowerCase().includes('energía') || 
+        rec.titulo.toLowerCase().includes('emisiones') ||
+        rec.titulo.toLowerCase().includes('combustible')) {
+      return 'Huella de Carbono';
+    }
+    if (rec.titulo.toLowerCase().includes('agua') || 
+        rec.titulo.toLowerCase().includes('hídric')) {
+      return 'Gestión Hídrica';
+    }
+    if (rec.titulo.toLowerCase().includes('residuo') || 
+        rec.titulo.toLowerCase().includes('valoriz') ||
+        rec.titulo.toLowerCase().includes('reciclaje')) {
+      return 'Gestión de Residuos';
+    }
+    return 'Gestión Ambiental';
+  };
+  
+  const getIcono = (dimension) => {
+    if (dimension === 'Huella de Carbono') return '⚡';
+    if (dimension === 'Gestión Hídrica') return '💧';
+    if (dimension === 'Gestión de Residuos') return '♻️';
+    return '📋';
+  };
+  
+  // Convertir al formato esperado por InformePDF
+  return recomendaciones.map(rec => ({
+    dimension: getDimension(rec),
+    icono: getIcono(getDimension(rec)),
+    titulo: rec.titulo,
+    descripcion: rec.descripcion,
+    impacto: getImpacto(rec),
+    facilidad: getFacilidad(rec),
+    prioridad: mapPrioridad[rec.prioridad],
+    ahorroPotencial: rec.impacto,
+    plazo: rec.plazo
+  }));
+}

@@ -110,6 +110,16 @@ export const getEvaluacionById = async (id) => {
       createdAt: new Date('2024-12-01'),
       alcance1: 18.5,
       alcance2: 12.3,
+
+      // ⬇️⬇️⬇️ CAMPOS DE AGUA AGREGADOS ⬇️⬇️⬇️
+      consumoAgua: 15000,        // 15,000 litros/mes
+      aguaReutilizada: 2000,     // 2,000 litros reutilizados
+      intensidadHidrica: {
+        valor: 75,               // L por unidad o por persona
+        unidad: 'L/persona'      // o 'L/unidad producida'
+      },
+      // ⬆️⬆️⬆️ HASTA AQUÍ ⬆️⬆️⬆️
+
       residuosGenerados: 3200,
       residuosValorizados: 2400,
       productosREP: [
@@ -142,6 +152,16 @@ export const getEvaluacionById = async (id) => {
       createdAt: new Date('2024-09-15'),
       alcance1: 22.8,
       alcance2: 15.6,
+
+      // ⬇️⬇️⬇️ CAMPOS DE AGUA AGREGADOS ⬇️⬇️⬇️
+      consumoAgua: 22000,        // 22,000 litros/mes
+      aguaReutilizada: 1500,     // 1,500 litros reutilizados
+      intensidadHidrica: {
+        valor: 110,
+        unidad: 'L/persona'
+      },
+      // ⬆️⬆️⬆️ HASTA AQUÍ ⬆️⬆️⬆️
+
       residuosGenerados: 2800,
       residuosValorizados: 1400,
       productosREP: [
@@ -168,15 +188,25 @@ export const getEvaluacionById = async (id) => {
       createdAt: new Date('2024-06-20'),
       alcance1: 28.5,
       alcance2: 10.2,
+
+      // ⬇️⬇️⬇️ CAMPOS DE AGUA AGREGADOS ⬇️⬇️⬇️
+      consumoAgua: 32000,        // 32,000 litros/mes (alto consumo)
+      aguaReutilizada: 800,      // Solo 800 litros reutilizados (baja eficiencia)
+      intensidadHidrica: {
+        valor: 160,              // Alto valor = baja eficiencia
+        unidad: 'L/persona'
+      },
+      // ⬆️⬆️⬆️ HASTA AQUÍ ⬆️⬆️⬆️
+
       residuosGenerados: 4500,
       residuosValorizados: 1350,
       productosREP: [], // Sin productos REP
     },
   ];
-  
+
   // Simular delay de red
   await new Promise(resolve => setTimeout(resolve, 300));
-  
+
   return fakeData.find(e => e._id === id) || fakeData[0];
 };
 
@@ -236,7 +266,7 @@ export async function eliminarEvaluacion(id) {
     throw error;
   }
   */
-  
+
   // SIMULACIÓN: Solo retornar éxito sin llamar al backend
   console.log('🎭 SIMULANDO eliminación de evaluación:', id);
   return new Promise((resolve) => {
