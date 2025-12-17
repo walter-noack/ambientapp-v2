@@ -5,17 +5,21 @@ import { usePdfPageNumbers } from "../../hooks/usePDFPageNumbers";
 import RadarChart from './RadarChart';
 import CarbonStackedChart from './CarbonStackedChart';
 import REPProgressBar from './REPProgressBar';
+import { CirculoNumeroSVG } from './CirculoNumeroSVG';
+import { BadgePlazoSVG } from './BadgeSVG';
+import { MatrizPriorizacionImagen } from './MatrizPriorizacionImagen';
 
 import {
     TrendingUp, AlertTriangle, Shield, AlertCircle, Info, CheckCircle, Target, Zap, Clock,
-    Rocket, Calendar, BarChart3, Leaf, Recycle, Droplet, ArrowRight, Circle, DollarSign, Lightbulb
+    Rocket, Calendar, BarChart3, Leaf, Recycle, Droplet, ArrowRight, Circle, DollarSign, Lightbulb, TrendingDown,
+    FileText
 } from 'lucide-react';
 import {
     FortalezaCard,
     OportunidadCard,
     RecomendacionMejorada,
     RoadmapTimeline,
-    QuickWinsSection 
+    QuickWinsSection
 } from './PlanAccionComponents';
 import {
     identificarFortalezas,
@@ -24,7 +28,6 @@ import {
     generarRoadmap,
     identificarQuickWins
 } from '../../utils/analisisEvaluacion';
-import { MatrizPriorizacionAsImage } from './ImageRenderedComponents';
 import { QuickWinsAsImage } from './ImageRenderedComponents';
 import { ProximosPasosWithImages } from './ImageRenderedComponents';
 
@@ -374,6 +377,11 @@ export default function InformePDF({
             }}
         >
 
+
+
+
+
+
             {/* ========================================================= */}
             {/*                       PÁGINA 1 - PORTADA                  */}
             {/* ========================================================= */}
@@ -424,6 +432,11 @@ export default function InformePDF({
 
             </section>
 
+
+
+
+
+
             {/* ========================================================= */}
             {/*                 PÁGINA 2 - RESUMEN EJECUTIVO              */}
             {/* ========================================================= */}
@@ -437,10 +450,8 @@ export default function InformePDF({
                     page={2}
                 />
 
-
                 {/* KPIs */}
                 <div className="grid grid-cols-2 gap-6 mb-10">
-
                     <CardKPI
                         title="Huella de carbono"
                         color="emerald"
@@ -468,20 +479,159 @@ export default function InformePDF({
                         value={repUltimo ? `${repPct.toFixed(1)}%` : "–"}
                         desc="Porcentaje valorizado según último registro."
                     />
-
                 </div>
 
-                {/* Interpretación global */}
-                <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/80 shadow-sm">
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-semibold mb-2">
-                        Interpretación general
-                    </p>
-                    <p className="text-sm text-slate-800 leading-relaxed">
-                        {textoGlobal}
-                    </p>
-                </div>
+                {/* PRINCIPALES HALLAZGOS Y OPORTUNIDADES */}
+                {(() => {
+                    // Calcular scores simplificados (0-100)
+                    const huellaCarbono = emisiones.totalTon;
+                    const alcance1 = emisiones.alcance1;
+                    const alcance2 = emisiones.alcance2;
+
+                    const carbonScore = huellaCarbono < 50 ? 80 : huellaCarbono < 100 ? 60 : 40;
+
+                    const consumoAgua = ev?.waterData?.consumoMensual || 0;
+                    const waterScore = consumoAgua < 10000 ? 80 : consumoAgua < 50000 ? 60 : 40;
+
+                    const residuosGenerados = totalResiduos;
+                    const residuosValorizados = ev?.wasteData?.valorizados || 0;
+                    const pctValorizacion = residuosGenerados > 0 ? (residuosValorizados / residuosGenerados) * 100 : 0;
+                    const wasteScore = pctValorizacion > 60 ? 80 : pctValorizacion > 30 ? 60 : 40;
+
+                    const scores = { carbonScore, waterScore, wasteScore };
+                    const productosREP = ev?.repData?.productos || [];
+
+                    return (
+                        <>
+                            {/* PRINCIPALES HALLAZGOS */}
+                            <div className="mt-6 p-4 bg-slate-50 border-l-4 border-blue-600 rounded-r-lg">
+                                <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4 text-blue-600" />
+                                    Principales hallazgos
+                                </h3>
+                                <ul className="space-y-2">
+                                    {/* Hallazgo 1: Carbono */}
+                                    {scores.carbonScore < 60 && (
+                                        <li className="text-xs text-slate-700 flex items-start gap-2">
+                                            <span className="text-red-600 font-bold">•</span>
+                                            <span>
+                                                <strong>Huella de carbono elevada:</strong> El Alcance {alcance1 > alcance2 ? '1' : '2'} representa
+                                                el {((Math.max(alcance1, alcance2) / huellaCarbono) * 100).toFixed(0)}% de las emisiones totales,
+                                                indicando oportunidad de reducción significativa.
+                                            </span>
+                                        </li>
+                                    )}
+                                    {scores.carbonScore >= 60 && (
+                                        <li className="text-xs text-slate-700 flex items-start gap-2">
+                                            <span className="text-green-600 font-bold">•</span>
+                                            <span>
+                                                <strong>Gestión de carbono sólida:</strong> El desempeño actual está por sobre el promedio de la industria,
+                                                con potencial de mejora en eficiencia energética.
+                                            </span>
+                                        </li>
+                                    )}
+
+                                    {/* Hallazgo 2: Agua */}
+                                    {scores.waterScore < 60 && (
+                                        <li className="text-xs text-slate-700 flex items-start gap-2">
+                                            <span className="text-orange-600 font-bold">•</span>
+                                            <span>
+                                                <strong>Intensidad hídrica alta:</strong> El consumo de agua por unidad de producción sugiere
+                                                oportunidades de optimización mediante tecnologías de recirculación y medición.
+                                            </span>
+                                        </li>
+                                    )}
+                                    {scores.waterScore >= 60 && (
+                                        <li className="text-xs text-slate-700 flex items-start gap-2">
+                                            <span className="text-green-600 font-bold">•</span>
+                                            <span>
+                                                <strong>Gestión hídrica eficiente:</strong> La intensidad de uso de agua está dentro de rangos
+                                                adecuados, con oportunidad de implementar metas de reducción progresiva.
+                                            </span>
+                                        </li>
+                                    )}
+
+                                    {/* Hallazgo 3: Residuos */}
+                                    {scores.wasteScore < 60 && (
+                                        <li className="text-xs text-slate-700 flex items-start gap-2">
+                                            <span className="text-red-600 font-bold">•</span>
+                                            <span>
+                                                <strong>Baja valorización de residuos:</strong> Solo el {((residuosValorizados / residuosGenerados) * 100).toFixed(0)}%
+                                                de los residuos se valoriza. Implementar segregación en origen puede duplicar esta tasa.
+                                            </span>
+                                        </li>
+                                    )}
+                                    {scores.wasteScore >= 60 && (
+                                        <li className="text-xs text-slate-700 flex items-start gap-2">
+                                            <span className="text-green-600 font-bold">•</span>
+                                            <span>
+                                                <strong>Valorización destacada:</strong> Con {((residuosValorizados / residuosGenerados) * 100).toFixed(0)}%
+                                                de valorización, la empresa supera las metas legales y puede aspirar a certificaciones ambientales.
+                                            </span>
+                                        </li>
+                                    )}
+
+                                    {/* Hallazgo 4: REP (si aplica) */}
+                                    {productosREP.length > 0 && (
+                                        <li className="text-xs text-slate-700 flex items-start gap-2">
+                                            <span className="text-blue-600 font-bold">•</span>
+                                            <span>
+                                                <strong>Cumplimiento REP:</strong> La empresa gestiona {productosREP.length} categoría(s) de productos prioritarios.
+                                                El cumplimiento de metas REP 2025-2030 requiere planificación de infraestructura.
+                                            </span>
+                                        </li>
+                                    )}
+                                </ul>
+                            </div>
+
+                            {/* ÁREAS DE OPORTUNIDAD INMEDIATA */}
+                            <div className="mt-4 p-4 bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-300 rounded-lg">
+                                <h3 className="text-sm font-bold text-emerald-900 mb-3 flex items-center gap-2">
+                                    <Lightbulb className="w-4 h-4 text-emerald-600" />
+                                    Áreas de oportunidad inmediata
+                                </h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {(() => {
+                                        const minScore = Math.min(scores.carbonScore, scores.waterScore, scores.wasteScore);
+                                        const areaDebil = minScore === scores.carbonScore ? 'carbono' :
+                                            minScore === scores.waterScore ? 'agua' : 'residuos';
+
+                                        return (
+                                            <>
+                                                <div className="p-3 bg-white rounded-lg border border-emerald-200">
+                                                    <p className="text-xs font-bold text-emerald-800 mb-1">
+                                                        {areaDebil === 'carbono' ? '⚡ Eficiencia Energética' :
+                                                            areaDebil === 'agua' ? '💧 Optimización Hídrica' :
+                                                                '♻️ Economía Circular'}
+                                                    </p>
+                                                    <p className="text-[10px] text-slate-600">
+                                                        {areaDebil === 'carbono' ? 'Auditoría energética puede identificar 20-30% de ahorro.' :
+                                                            areaDebil === 'agua' ? 'Medidores inteligentes reducen consumo hasta 25%.' :
+                                                                'Segregación en origen aumenta valorización 40-60%.'}
+                                                    </p>
+                                                </div>
+
+                                                <div className="p-3 bg-white rounded-lg border border-emerald-200">
+                                                    <p className="text-xs font-bold text-emerald-800 mb-1">📊 Medición y Monitoreo</p>
+                                                    <p className="text-[10px] text-slate-600">
+                                                        Sistema de KPIs ambientales permite seguimiento mensual y toma de decisiones basada en datos.
+                                                    </p>
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+                        </>
+                    );
+                })()}
 
             </section>
+
+
+
+
+
 
             {/* ========================================================= */}
             {/*              PÁGINA 3 - PERFIL AMBIENTAL (RADAR)         */}
@@ -496,7 +646,8 @@ export default function InformePDF({
                     page={3}
                 />
 
-                <div className="grid grid-cols-[1.1fr_1.2fr] gap-10">
+                {/* RADAR E INTERPRETACIÓN - 2 COLUMNAS */}
+                <div className="grid grid-cols-[1.1fr_1.2fr] gap-10 mb-6">
 
                     {/* RADAR */}
                     <ChartBox
@@ -509,13 +660,11 @@ export default function InformePDF({
                             </>
                         }
                     >
-
                         <RadarChart
                             carbonScore={ev?.scores?.carbonScore}
                             waterScore={ev?.scores?.waterScore}
                             wasteScore={ev?.scores?.wasteScore}
                         />
-
                     </ChartBox>
 
                     {/* INTERPRETACIÓN */}
@@ -528,8 +677,103 @@ export default function InformePDF({
                         {/* TARJETAS */}
                         <ScoreGrid scores={ev.scores} />
                     </div>
+
                 </div>
+
+                {/* METODOLOGÍA Y CONTEXTO - ANCHO COMPLETO */}
+                <div className="space-y-3">
+                    {/* Metodología de ponderación */}
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h4 className="text-[11px] font-bold text-blue-900 mb-2 flex items-center gap-1">
+                            <Info className="w-3 h-3" />
+                            Metodología de ponderación
+                        </h4>
+                        <p className="text-[9px] text-slate-700 leading-tight mb-2">
+                            Cada dimensión ambiental se evalúa mediante indicadores cuantitativos específicos.
+                            El puntaje final (0-100) refleja el desempeño en relación a estándares chilenos vigentes
+                            y buenas prácticas internacionales:
+                        </p>
+                        <ul className="grid grid-cols-3 gap-2 text-[9px] text-slate-600">
+                            <li className="flex items-start gap-1">
+                                <span className="text-blue-600">•</span>
+                                <span><strong>Huella de Carbono:</strong> Calculada según GHG Protocol con factores de emisión MMA 2023. Se ponderan Alcances 1 y 2.</span>
+                            </li>
+                            <li className="flex items-start gap-1">
+                                <span className="text-blue-600">•</span>
+                                <span><strong>Gestión Hídrica:</strong> Evaluación de intensidad de uso según NCh ISO 14046 y eficiencia operacional.</span>
+                            </li>
+                            <li className="flex items-start gap-1">
+                                <span className="text-blue-600">•</span>
+                                <span><strong>Residuos y REP:</strong> Tasa de valorización vs disposición final, cumplimiento Ley 20.920 y metas sectoriales.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {/* Escala de evaluación */}
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                        <h4 className="text-[11px] font-bold text-slate-900 mb-2 flex items-center gap-1">
+                            <BarChart3 className="w-3 h-3" />
+                            Escala de evaluación
+                        </h4>
+                        <div className="grid grid-cols-4 gap-3 text-[8px]">
+                            <div className="p-2 bg-red-100 border border-red-300 rounded text-center">
+                                <span className="font-bold text-red-800 block text-sm">0-29</span>
+                                <span className="text-red-700 font-semibold">Bajo</span>
+                                <p className="text-[7px] text-red-600 mt-0.5">Requiere acción inmediata</p>
+                            </div>
+                            <div className="p-2 bg-yellow-100 border border-yellow-300 rounded text-center">
+                                <span className="font-bold text-yellow-800 block text-sm">30-59</span>
+                                <span className="text-yellow-700 font-semibold">Básico</span>
+                                <p className="text-[7px] text-yellow-600 mt-0.5">Cumplimiento mínimo</p>
+                            </div>
+                            <div className="p-2 bg-blue-100 border border-blue-300 rounded text-center">
+                                <span className="font-bold text-blue-800 block text-sm">60-79</span>
+                                <span className="text-blue-700 font-semibold">Intermedio</span>
+                                <p className="text-[7px] text-blue-600 mt-0.5">Sobre promedio</p>
+                            </div>
+                            <div className="p-2 bg-green-100 border border-green-300 rounded text-center">
+                                <span className="font-bold text-green-800 block text-sm">80-100</span>
+                                <span className="text-green-700 font-semibold">Avanzado</span>
+                                <p className="text-[7px] text-green-600 mt-0.5">Excelencia ambiental</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Significado de cada dimensión */}
+                    <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                        <h4 className="text-[11px] font-bold text-indigo-900 mb-2">Significado de cada dimensión</h4>
+                        <div className="grid grid-cols-3 gap-3 text-[9px] text-slate-700">
+                            <div className="flex items-start gap-1.5">
+                                <span className="text-indigo-600 font-bold">→</span>
+                                <span><strong>Carbono:</strong> Mide la eficiencia en reducción de emisiones de gases de efecto invernadero (GEI). Mayor puntaje indica menor intensidad de carbono por unidad de actividad.</span>
+                            </div>
+                            <div className="flex items-start gap-1.5">
+                                <span className="text-indigo-600 font-bold">→</span>
+                                <span><strong>Agua:</strong> Evalúa la optimización del recurso hídrico. Considera consumo total, intensidad de uso y eficiencia operacional.</span>
+                            </div>
+                            <div className="flex items-start gap-1.5">
+                                <span className="text-indigo-600 font-bold">→</span>
+                                <span><strong>Residuos:</strong> Refleja la tasa de valorización y adherencia a principios de economía circular. Incluye cumplimiento REP cuando aplica.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* INSIGHT CLAVE */}
+                <div className="mt-3 p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-600 rounded-r-lg">
+                    <p className="text-[9px] text-slate-700">
+                        <span className="font-bold text-blue-900">💡 Insight:</span> El perfil radar identifica brechas de desempeño.
+                        Las dimensiones con menor puntaje representan las <strong>mayores oportunidades de mejora</strong> con
+                        retorno de inversión más rápido. El plan de acción prioriza estas áreas para maximizar el impacto ambiental y económico.
+                    </p>
+                </div>
+
             </section>
+
+
+
+
+
 
             {/* ========================================================= */}
             {/*           PÁGINA 4 - HUELLA DE CARBONO (STACKED BAR)     */}
@@ -551,12 +795,10 @@ export default function InformePDF({
                         title="Distribución por Alcance (A1 / A2)"
                         desc="El gráfico muestra visualmente la participación relativa entre combustibles (A1) y electricidad (A2)."
                     >
-                        {/* ⬇️⬇️⬇️ AGREGAR GRÁFICO ⬇️⬇️⬇️ */}
                         <CarbonStackedChart
                             alcance1={emisiones?.alcance1 || 0}
                             alcance2={emisiones?.alcance2 || 0}
                         />
-                        {/* ⬆️⬆️⬆️ HASTA AQUÍ ⬆️⬆️⬆️ */}
                     </ChartBox>
 
                     {/* INTERPRETACIÓN */}
@@ -567,47 +809,211 @@ export default function InformePDF({
                         <p className="text-sm leading-relaxed mb-4">{textoCarbono}</p>
 
                         {/* KPIs */}
-                        <div className="grid grid-cols-3 gap-3">
-                            <div className="text-center p-3 bg-slate-50 rounded-lg border border-slate-200">
-                                <p className="text-[10px] uppercase tracking-wider text-slate-600 mb-1">
-                                    TOTAL
-                                </p>
-                                <p className="text-2xl font-bold text-slate-900">
-                                    {emisiones?.totalTon?.toFixed(2) || '0.00'}
-                                </p>
-                                <p className="text-[10px] text-slate-500">tCO₂e</p>
-                            </div>
+                        {(() => {
+                            const totalKg = emisiones?.totalKg || 0;
+                            const alcance1Kg = emisiones?.alcance1 || 0;
+                            const alcance2Kg = emisiones?.alcance2 || 0;
 
-                            <div className="text-center p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-                                <p className="text-[10px] uppercase tracking-wider text-emerald-700 mb-1">
-                                    A1
-                                </p>
-                                <p className="text-2xl font-bold text-emerald-900">
-                                    {emisiones?.alcance1?.toFixed(2) || '0.00'}
-                                </p>
-                                <p className="text-[10px] text-emerald-600">
-                                    tCO₂e ({((emisiones?.alcance1 / (emisiones?.alcance1 + emisiones?.alcance2)) * 100).toFixed(1)}%)
-                                </p>
-                            </div>
+                            // Función helper para formatear según magnitud
+                            const formatEmision = (kg) => {
+                                if (kg < 1000) {
+                                    return { valor: kg.toFixed(1), unidad: 'kgCO₂e' };
+                                } else {
+                                    return { valor: (kg / 1000).toFixed(2), unidad: 'tCO₂e' };
+                                }
+                            };
 
-                            <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                <p className="text-[10px] uppercase tracking-wider text-blue-700 mb-1">
-                                    A2
-                                </p>
-                                <p className="text-2xl font-bold text-blue-900">
-                                    {emisiones?.alcance2?.toFixed(2) || '0.00'}
-                                </p>
-                                <p className="text-[10px] text-blue-600">
-                                    tCO₂e ({((emisiones?.alcance2 / (emisiones?.alcance1 + emisiones?.alcance2)) * 100).toFixed(1)}%)
-                                </p>
-                            </div>
-                        </div>
+                            const total = formatEmision(totalKg);
+                            const a1 = formatEmision(alcance1Kg);
+                            const a2 = formatEmision(alcance2Kg);
+
+                            return (
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="text-center p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                        <p className="text-[10px] uppercase tracking-wider text-slate-600 mb-1">
+                                            TOTAL
+                                        </p>
+                                        <p className="text-2xl font-bold text-slate-900">
+                                            {total.valor}
+                                        </p>
+                                        <p className="text-[10px] text-slate-500">{total.unidad}</p>
+                                    </div>
+
+                                    <div className="text-center p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+                                        <p className="text-[10px] uppercase tracking-wider text-emerald-700 mb-1">
+                                            A1
+                                        </p>
+                                        <p className="text-2xl font-bold text-emerald-900">
+                                            {a1.valor}
+                                        </p>
+                                        <p className="text-[10px] text-emerald-600">
+                                            {a1.unidad} ({((alcance1Kg / totalKg) * 100).toFixed(1)}%)
+                                        </p>
+                                    </div>
+
+                                    <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                        <p className="text-[10px] uppercase tracking-wider text-blue-700 mb-1">
+                                            A2
+                                        </p>
+                                        <p className="text-2xl font-bold text-blue-900">
+                                            {a2.valor}
+                                        </p>
+                                        <p className="text-[10px] text-blue-600">
+                                            {a2.unidad} ({((alcance2Kg / totalKg) * 100).toFixed(1)}%)
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
-
 
                 </div>
 
+                {/* DESGLOSE, META Y PROYECCIÓN */}
+                {(() => {
+                    const alcance1 = emisiones?.alcance1 || 0;
+                    const alcance2 = emisiones?.alcance2 || 0;
+                    const totalKg = emisiones?.totalKg || 0;
+
+                    // Determinar si mostrar en kg o toneladas
+                    const esMenorA1Ton = totalKg < 1000;
+                    const valorMostrar = esMenorA1Ton ? totalKg : (totalKg / 1000);
+                    const unidad = esMenorA1Ton ? 'kgCO₂e' : 'tCO₂e';
+
+                    return (
+                        <>
+                            {/* DESGLOSE POR FUENTE */}
+                            <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-300">
+                                <h4 className="text-xs font-bold text-slate-800 mb-3">Desglose por fuente de emisión</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {/* Alcance 1 - Desglose REAL */}
+                                    <div className="p-3 bg-white rounded border border-red-200">
+                                        <p className="text-[10px] font-bold text-red-800 mb-2">Alcance 1 - Emisiones directas</p>
+                                        <ul className="space-y-1 text-[9px] text-slate-600">
+                                            {emisiones?.detalle?.diesel > 0 && (
+                                                <li className="flex justify-between">
+                                                    <span>• Diesel:</span>
+                                                    <span className="font-semibold">{emisiones.detalle.diesel.toFixed(1)} kg</span>
+                                                </li>
+                                            )}
+                                            {emisiones?.detalle?.bencina > 0 && (
+                                                <li className="flex justify-between">
+                                                    <span>• Gasolina:</span>
+                                                    <span className="font-semibold">{emisiones.detalle.bencina.toFixed(1)} kg</span>
+                                                </li>
+                                            )}
+                                            {emisiones?.detalle?.gasNatural > 0 && (
+                                                <li className="flex justify-between">
+                                                    <span>• Gas natural:</span>
+                                                    <span className="font-semibold">{emisiones.detalle.gasNatural.toFixed(1)} kg</span>
+                                                </li>
+                                            )}
+
+                                            {/* Si no hay ningún combustible, mostrar mensaje */}
+                                            {!emisiones?.detalle?.diesel &&
+                                                !emisiones?.detalle?.bencina &&
+                                                !emisiones?.detalle?.gasNatural && (
+                                                    <li className="text-slate-400 italic">Sin desglose de combustibles</li>
+                                                )}
+
+                                            <li className="flex justify-between border-t border-slate-200 pt-1 mt-1">
+                                                <span className="font-bold">Total Alcance 1:</span>
+                                                <span className="font-bold text-red-700">{alcance1.toFixed(1)} kg</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    {/* Alcance 2 - Electricidad */}
+                                    <div className="p-3 bg-white rounded border border-orange-200">
+                                        <p className="text-[10px] font-bold text-orange-800 mb-2">Alcance 2 - Emisiones indirectas</p>
+                                        <ul className="space-y-1 text-[9px] text-slate-600">
+                                            <li className="flex justify-between">
+                                                <span>• Electricidad comprada:</span>
+                                                <span className="font-semibold">{(emisiones?.detalle?.electricidad || 0).toFixed(1)} kg</span>
+                                            </li>
+                                            <li className="flex justify-between border-t border-slate-200 pt-1 mt-1">
+                                                <span className="font-bold">Total Alcance 2:</span>
+                                                <span className="font-bold text-orange-700">{alcance2.toFixed(1)} kg</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* META SBTi Y PROYECCIÓN */}
+                            <div className="mt-4 grid grid-cols-2 gap-4">
+                                {/* Meta SBTi */}
+                                <div className="p-4 bg-blue-50 border-2 border-blue-300 rounded-lg">
+                                    <h4 className="text-xs font-bold text-blue-900 mb-2 flex items-center gap-1">
+                                        <Target className="w-4 h-4" />
+                                        Meta recomendada según SBTi
+                                    </h4>
+                                    <p className="text-[10px] text-slate-700 mb-2">
+                                        La <strong>Science Based Targets initiative (SBTi)</strong> recomienda reducción de
+                                        <strong className="text-blue-700"> 4.2% anual</strong> para limitar el calentamiento a 1.5°C.
+                                    </p>
+                                    <div className="bg-white p-3 rounded border border-blue-200">
+                                        <p className="text-[9px] text-slate-600 mb-1">Huella actual:</p>
+                                        <p className="text-lg font-bold text-slate-800">{valorMostrar.toFixed(1)} {unidad}</p>
+                                        <p className="text-[9px] text-slate-600 mt-2 mb-1">Meta 2030 (reducción 4.2%/año):</p>
+                                        <p className="text-lg font-bold text-blue-700">
+                                            {(valorMostrar * Math.pow(0.958, 6)).toFixed(1)} {unidad}
+                                        </p>
+                                        <p className="text-[8px] text-green-600 mt-1">
+                                            ↓ {((1 - Math.pow(0.958, 6)) * 100).toFixed(0)}% reducción total
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Proyección con Plan de Acción */}
+                                <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
+                                    <h4 className="text-xs font-bold text-green-900 mb-2 flex items-center gap-1">
+                                        <TrendingDown className="w-4 h-4" />
+                                        Proyección con Plan de Acción
+                                    </h4>
+                                    <p className="text-[10px] text-slate-700 mb-2">
+                                        Implementando las recomendaciones de alta prioridad, se estima una reducción de
+                                        <strong className="text-green-700"> 20-30%</strong> en 12-18 meses.
+                                    </p>
+                                    <div className="bg-white p-3 rounded border border-green-200">
+                                        <div className="space-y-2 text-[9px]">
+                                            <div className="flex justify-between">
+                                                <span className="text-slate-600">Optimización energética:</span>
+                                                <span className="font-semibold text-green-700">-15%</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-slate-600">Eficiencia de procesos:</span>
+                                                <span className="font-semibold text-green-700">-8%</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-slate-600">Energías renovables:</span>
+                                                <span className="font-semibold text-green-700">-7%</span>
+                                            </div>
+                                            <div className="flex justify-between border-t border-slate-300 pt-1 mt-1">
+                                                <span className="font-bold text-slate-800">Reducción total estimada:</span>
+                                                <span className="font-bold text-green-700">-30%</span>
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 pt-2 border-t border-green-200">
+                                            <p className="text-[9px] text-slate-600">Huella proyectada 2026:</p>
+                                            <p className="text-lg font-bold text-green-700">
+                                                {(valorMostrar * 0.7).toFixed(1)} {unidad}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    );
+                })()}
+
             </section>
+
+
+
+
+
+
             {/* ========================================================= */}
             {/*           PÁGINA 5 - GESTIÓN HÍDRICA                      */}
             {/* ========================================================= */}
@@ -677,7 +1083,76 @@ export default function InformePDF({
                         </div>
                     </div>
                 </div>
+                {/* AGREGAR DEBAJO DE LOS KPIs DE AGUA EN PÁGINA 5 */}
 
+                {/* RECOMENDACIONES DE EFICIENCIA */}
+                <div className="mt-6 p-4 bg-blue-50 border-2 border-blue-300 rounded-lg">
+                    <h4 className="text-xs font-bold text-blue-900 mb-3 flex items-center gap-1">
+                        <Lightbulb className="w-4 h-4" />
+                        Recomendaciones de eficiencia hídrica
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                        {/* Quick Wins */}
+                        <div>
+                            <p className="text-[10px] font-bold text-blue-800 mb-2">Acciones rápidas (0-3 meses):</p>
+                            <ul className="space-y-1 text-[9px] text-slate-700">
+                                <li className="flex items-start gap-1">
+                                    <span className="text-blue-600">✓</span>
+                                    <span><strong>Detección de fugas:</strong> Inspección de red puede identificar pérdidas del 10-15%</span>
+                                </li>
+                                <li className="flex items-start gap-1">
+                                    <span className="text-blue-600">✓</span>
+                                    <span><strong>Medidores inteligentes:</strong> Instalación permite monitoreo en tiempo real</span>
+                                </li>
+                                <li className="flex items-start gap-1">
+                                    <span className="text-blue-600">✓</span>
+                                    <span><strong>Capacitación personal:</strong> Concientización reduce consumo 5-10%</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* Mediano plazo */}
+                        <div>
+                            <p className="text-[10px] font-bold text-blue-800 mb-2">Medidas estructurales (6-12 meses):</p>
+                            <ul className="space-y-1 text-[9px] text-slate-700">
+                                <li className="flex items-start gap-1">
+                                    <span className="text-green-600">→</span>
+                                    <span><strong>Sistemas de recirculación:</strong> Reutilización de aguas de proceso</span>
+                                </li>
+                                <li className="flex items-start gap-1">
+                                    <span className="text-green-600">→</span>
+                                    <span><strong>Tecnologías eficientes:</strong> Equipos de bajo consumo (grifería, WC)</span>
+                                </li>
+                                <li className="flex items-start gap-1">
+                                    <span className="text-green-600">→</span>
+                                    <span><strong>Captación pluvial:</strong> Aprovechamiento de aguas lluvias</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                {/* METAS RECOMENDADAS */}
+                <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-300 rounded-lg">
+                    <h4 className="text-xs font-bold text-blue-900 mb-3">Metas de reducción recomendadas</h4>
+                    <div className="grid grid-cols-3 gap-2 text-[9px]">
+                        <div className="p-2 bg-white rounded border border-blue-200 text-center">
+                            <p className="font-bold text-blue-700">Corto plazo (2025)</p>
+                            <p className="text-2xl font-bold text-blue-800 my-1">-10%</p>
+                            <p className="text-slate-600">Optimización inmediata</p>
+                        </div>
+                        <div className="p-2 bg-white rounded border border-blue-200 text-center">
+                            <p className="font-bold text-blue-700">Mediano plazo (2027)</p>
+                            <p className="text-2xl font-bold text-blue-800 my-1">-25%</p>
+                            <p className="text-slate-600">Infraestructura eficiente</p>
+                        </div>
+                        <div className="p-2 bg-white rounded border border-blue-200 text-center">
+                            <p className="font-bold text-blue-700">Largo plazo (2030)</p>
+                            <p className="text-2xl font-bold text-blue-800 my-1">-40%</p>
+                            <p className="text-slate-600">Economía circular del agua</p>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             {/* ========================================================= */}
@@ -693,56 +1168,127 @@ export default function InformePDF({
                     page={6}
                 />
 
+                {/* KPIs PRINCIPALES - 3 COLUMNAS */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                    <CardKPI
+                        title="Residuos totales"
+                        color="lime"
+                        value={`${(totalResiduos || 0).toLocaleString('es-CL')} kg`}
+                        desc="Cantidad total generada en el período"
+                    />
 
-                <div className="grid grid-cols-2 gap-10 mb-8 shadow-sm no-split">
+                    <CardKPI
+                        title="Residuos reciclados"
+                        color="emerald"
+                        value={`${(ev?.wasteData?.residuosReciclados || 0).toLocaleString('es-CL')} kg`}
+                        desc="Cantidad valorizada mediante reciclaje"
+                    />
 
-                    {/* KPIs DE RESIDUOS */}
-                    <div className="space-y-6">
-                        <CardKPI
-                            title="Residuos totales"
-                            color="lime"
-                            value={`${(totalResiduos || 0).toLocaleString('es-CL')} kg`}
-                            desc="Cantidad total de residuos generados en el período"
-                        />
+                    <CardKPI
+                        title="Tasa de valorización"
+                        color="green"
+                        value={`${calcularPorcentajeReciclaje(ev?.wasteData)}%`}
+                        desc="Porcentaje valorizado sobre el total"
+                    />
+                </div>
 
-                        <CardKPI
-                            title="Residuos reciclados"
-                            color="emerald"
-                            value={`${(ev?.wasteData?.residuosReciclados || 0).toLocaleString('es-CL')} kg`}
-                            desc="Cantidad de residuos valorizados mediante reciclaje"
-                        />
+                {/* ANÁLISIS DE DESEMPEÑO - ANCHO COMPLETO */}
+                <div className="border border-slate-200 rounded-xl p-5 bg-white shadow-sm mb-6">
+                    <h3 className="text-sm font-semibold mb-3">Análisis de desempeño</h3>
+                    <p className="text-sm text-slate-700 leading-relaxed mb-4">
+                        {interpretarResiduos(ev?.wasteData, ev?.scores?.wasteScore)}
+                    </p>
 
-                        <CardKPI
-                            title="Porcentaje de reciclaje"
-                            color="green"
-                            value={`${calcularPorcentajeReciclaje(ev?.wasteData)}%`}
-                            desc="Tasa de valorización sobre el total generado"
-                        />
+                    {/* Métricas adicionales */}
+                    <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-200">
+                        <div className="text-center p-3 bg-slate-50 rounded">
+                            <p className="text-xs text-slate-600 mb-1">Residuos no valorizados</p>
+                            <p className="text-2xl font-bold text-red-600">
+                                {((totalResiduos || 0) - (ev?.wasteData?.residuosReciclados || 0)).toLocaleString('es-CL')} kg
+                            </p>
+                            <p className="text-[10px] text-slate-500">Enviados a disposición final</p>
+                        </div>
+
+                        <div className="text-center p-3 bg-green-50 rounded">
+                            <p className="text-xs text-slate-600 mb-1">Potencial de mejora</p>
+                            <p className="text-2xl font-bold text-green-600">
+                                {(100 - parseFloat(calcularPorcentajeReciclaje(ev?.wasteData))).toFixed(0)}%
+                            </p>
+                            <p className="text-[10px] text-slate-500">Margen para incrementar valorización</p>
+                        </div>
+
+                        <div className="text-center p-3 bg-blue-50 rounded">
+                            <p className="text-xs text-slate-600 mb-1">Meta recomendada 2025</p>
+                            <p className="text-2xl font-bold text-blue-600">
+                                {Math.min(parseFloat(calcularPorcentajeReciclaje(ev?.wasteData)) + 20, 80).toFixed(0)}%
+                            </p>
+                            <p className="text-[10px] text-slate-500">Valorización objetivo</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* RECOMENDACIONES Y CUMPLIMIENTO REP */}
+                <div className="grid grid-cols-2 gap-6">
+                    {/* Recomendaciones */}
+                    <div className="p-5 bg-emerald-50 border-2 border-emerald-300 rounded-xl">
+                        <h4 className="text-sm font-bold text-emerald-900 mb-3 flex items-center gap-2">
+                            <Lightbulb className="w-4 h-4" />
+                            Acciones prioritarias
+                        </h4>
+                        <ul className="text-xs text-emerald-800 space-y-2">
+                            <li className="flex items-start gap-2">
+                                <span className="text-emerald-600 font-bold">1.</span>
+                                <span><strong>Segregación en origen:</strong> Separar residuos por tipo desde la fuente de generación</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <span className="text-emerald-600 font-bold">2.</span>
+                                <span><strong>Alianzas estratégicas:</strong> Establecer convenios con gestores certificados</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <span className="text-emerald-600 font-bold">3.</span>
+                                <span><strong>Capacitación continua:</strong> Formar al personal en manejo responsable</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <span className="text-emerald-600 font-bold">4.</span>
+                                <span><strong>Economía circular:</strong> Evaluar oportunidades de reutilización y upcycling</span>
+                            </li>
+                        </ul>
                     </div>
 
-                    {/* INTERPRETACIÓN */}
-                    <div className="border border-slate-200 rounded-xl p-5 bg-white shadow-sm shadow-sm no-split">
-                        <h3 className="text-sm font-semibold mb-2">Interpretación</h3>
-                        <p className="text-sm text-slate-700 leading-relaxed mb-4">
-                            {interpretarResiduos(ev?.wasteData, ev?.scores?.wasteScore)}
+                    {/* Cumplimiento REP */}
+                    <div className="p-5 bg-blue-50 border-2 border-blue-300 rounded-xl">
+                        <h4 className="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
+                            <FileText className="w-4 h-4" />
+                            Responsabilidad Extendida (REP)
+                        </h4>
+                        <p className="text-xs text-slate-700 mb-3">
+                            La Ley 20.920 establece metas de valorización para productos prioritarios.
+                            El cumplimiento requiere:
                         </p>
-
-                        <div className="mt-6 p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-r-lg">
-                            <h4 className="text-xs font-semibold text-emerald-900 mb-2">
-                                💡 Recomendaciones
-                            </h4>
-                            <ul className="text-xs text-emerald-800 space-y-1 list-disc list-inside">
-                                <li>Implementar segregación en origen por tipo de residuo</li>
-                                <li>Establecer alianzas con gestores certificados</li>
-                                <li>Capacitar al personal en manejo de residuos</li>
-                                <li>Evaluar oportunidades de economía circular</li>
-                                <li>Documentar y reportar valorizaciones para cumplimiento REP</li>
-                            </ul>
+                        <div className="space-y-2 text-xs">
+                            <div className="p-2 bg-white rounded border border-blue-200">
+                                <p className="font-bold text-blue-800">Registro y trazabilidad</p>
+                                <p className="text-slate-600 text-[10px]">Documentar valorizaciones con gestores autorizados</p>
+                            </div>
+                            <div className="p-2 bg-white rounded border border-blue-200">
+                                <p className="font-bold text-blue-800">Metas progresivas</p>
+                                <p className="text-slate-600 text-[10px]">Incremento anual según decreto sectorial</p>
+                            </div>
+                            <div className="p-2 bg-white rounded border border-blue-200">
+                                <p className="font-bold text-blue-800">Reporte anual</p>
+                                <p className="text-slate-600 text-[10px]">Declaración al Ministerio del Medio Ambiente</p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
             </section>
+
+
+
+
+
+
 
             {/* ========================================================= */}
             {/*      PÁGINA 7 - RESPONSABILIDAD EXTENDIDA (REP)          */}
@@ -1246,7 +1792,7 @@ export default function InformePDF({
                                     </div>
 
                                     {/* Matriz */}
-                                    <MatrizPriorizacionAsImage recomendaciones={recomendaciones} />
+                                    <MatrizPriorizacionImagen recomendaciones={recomendaciones} />
                                 </div>
                             </div>
 
@@ -1260,9 +1806,11 @@ export default function InformePDF({
                                         <h3 className="text-sm font-bold text-slate-800">
                                             Recomendaciones de alta prioridad
                                         </h3>
-                                        <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[9px] font-bold rounded">
-                                            Implementar en 0-6 meses
-                                        </span>
+                                        <BadgePlazoSVG
+                                            texto="Implementar en 0-6 meses"
+                                            bgColor="#fee2e2"
+                                            textColor="#991b1b"
+                                        />
                                         {necesitaSegundaPagina && (
                                             <span className="ml-auto text-[9px] text-slate-500">(1/2)</span>
                                         )}
@@ -1350,9 +1898,11 @@ export default function InformePDF({
                                             <h3 className="text-sm font-bold text-slate-800">
                                                 Recomendaciones de media prioridad
                                             </h3>
-                                            <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-[9px] font-bold rounded">
-                                                6-18 meses
-                                            </span>
+                                            <BadgePlazoSVG
+                                                texto="6-18 meses"
+                                                bgColor="#fef3c7"
+                                                textColor="#78350f"
+                                            />
                                         </div>
 
                                         <div className="space-y-3">
@@ -1518,10 +2068,6 @@ export default function InformePDF({
                                         </li>
                                         <li className="text-[9px] text-slate-600 flex items-start gap-1">
                                             <span className="text-blue-600">•</span>
-                                            <span>% Agua reutilizada</span>
-                                        </li>
-                                        <li className="text-[9px] text-slate-600 flex items-start gap-1">
-                                            <span className="text-blue-600">•</span>
                                             <span>Intensidad hídrica</span>
                                         </li>
                                     </ul>
@@ -1549,20 +2095,12 @@ export default function InformePDF({
                             <div className="grid grid-cols-2 gap-2 mb-3">
                                 {/* Paso 1 */}
                                 <div className="flex gap-2 p-2 bg-white border-l-4 border-red-500 rounded-r-lg shadow-sm">
-                                    <div
-                                        className="bg-red-600 text-white font-bold flex-shrink-0"
-                                        style={{
-                                            width: '24px',
-                                            height: '24px',
-                                            borderRadius: '50%',
-                                            display: 'grid',
-                                            placeItems: 'center',
-                                            fontSize: '0.75rem',
-                                            lineHeight: 1
-                                        }}
-                                    >
-                                        1
-                                    </div>
+                                    <CirculoNumeroSVG
+                                        numero={1}
+                                        size={24}
+                                        bgColor="#dc2626"
+                                        fontSize={12}
+                                    />
                                     <div className="flex-1">
                                         <h4 className="text-[10px] font-bold text-slate-800 mb-0.5">
                                             Asignar responsables
@@ -1575,20 +2113,12 @@ export default function InformePDF({
 
                                 {/* Paso 2 */}
                                 <div className="flex gap-2 p-2 bg-white border-l-4 border-orange-500 rounded-r-lg shadow-sm">
-                                    <div
-                                        className="bg-orange-600 text-white font-bold flex-shrink-0"
-                                        style={{
-                                            width: '24px',
-                                            height: '24px',
-                                            borderRadius: '50%',
-                                            display: 'grid',
-                                            placeItems: 'center',
-                                            fontSize: '0.75rem',
-                                            lineHeight: 1
-                                        }}
-                                    >
-                                        2
-                                    </div>
+                                    <CirculoNumeroSVG
+                                        numero={2}
+                                        size={24}
+                                        bgColor="#ea580c"
+                                        fontSize={12}
+                                    />
                                     <div className="flex-1">
                                         <h4 className="text-[10px] font-bold text-slate-800 mb-0.5">
                                             Aprobar presupuesto
@@ -1601,20 +2131,12 @@ export default function InformePDF({
 
                                 {/* Paso 3 */}
                                 <div className="flex gap-2 p-2 bg-white border-l-4 border-yellow-500 rounded-r-lg shadow-sm">
-                                    <div
-                                        className="bg-yellow-600 text-white font-bold flex-shrink-0"
-                                        style={{
-                                            width: '24px',
-                                            height: '24px',
-                                            borderRadius: '50%',
-                                            display: 'grid',
-                                            placeItems: 'center',
-                                            fontSize: '0.75rem',
-                                            lineHeight: 1
-                                        }}
-                                    >
-                                        3
-                                    </div>
+                                    <CirculoNumeroSVG
+                                        numero={3}
+                                        size={24}
+                                        bgColor="#ca8a04"
+                                        fontSize={12}
+                                    />
                                     <div className="flex-1">
                                         <h4 className="text-[10px] font-bold text-slate-800 mb-0.5">
                                             Kick-off del proyecto
@@ -1627,20 +2149,12 @@ export default function InformePDF({
 
                                 {/* Paso 4 */}
                                 <div className="flex gap-2 p-2 bg-white border-l-4 border-green-500 rounded-r-lg shadow-sm">
-                                    <div
-                                        className="bg-green-600 text-white font-bold flex-shrink-0"
-                                        style={{
-                                            width: '24px',
-                                            height: '24px',
-                                            borderRadius: '50%',
-                                            display: 'grid',
-                                            placeItems: 'center',
-                                            fontSize: '0.75rem',
-                                            lineHeight: 1
-                                        }}
-                                    >
-                                        4
-                                    </div>
+                                    <CirculoNumeroSVG
+                                        numero={4}
+                                        size={24}
+                                        bgColor="#16a34a"
+                                        fontSize={12}
+                                    />
                                     <div className="flex-1">
                                         <h4 className="text-[10px] font-bold text-slate-800 mb-0.5">
                                             Programar seguimiento

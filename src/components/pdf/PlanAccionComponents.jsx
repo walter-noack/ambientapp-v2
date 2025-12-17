@@ -5,6 +5,30 @@ import {
   Lightbulb, TrendingDown, BarChart2, Circle, Rocket 
 } from 'lucide-react';
 
+// ⬆️ Importar componentes SVG
+import { CirculoNumeroSVG } from './CirculoNumeroSVG';
+import { 
+  BadgePuntajeSVG, 
+  BadgePrioridadSVG, 
+  BadgeAtributoSVG, 
+  BadgeKPISVG,
+  BadgeSVG,          // Para badges personalizados
+  BadgeROISVG,       // Para ROI Estimado
+  BadgePlazoSVG      // Para plazos de implementación
+} from './BadgeSVG';
+
+// Mapeo de colores para SVG
+const COLORES_HEX = {
+  'bg-red-600': '#dc2626',
+  'bg-yellow-600': '#ca8a04',
+  'bg-green-600': '#16a34a'
+};
+
+const COLORES_PUNTAJE = {
+  'bg-emerald-600': '#059669',
+  'bg-amber-600': '#d97706'
+};
+
 /**
  * Card para mostrar fortalezas identificadas
  */
@@ -15,9 +39,7 @@ export function FortalezaCard({ area, puntaje, dato, destaque }) {
         <h4 className="text-xs font-semibold text-emerald-900 flex-1">
           {area}
         </h4>
-        <span className="px-2 py-1 bg-emerald-600 text-white text-[10px] font-bold rounded flex items-center justify-center min-w-[50px]">
-          {puntaje}/100
-        </span>
+        <BadgePuntajeSVG puntaje={puntaje} bgColor="#059669" width={60} height={24} />
       </div>
       <p className="text-[11px] font-semibold text-emerald-700 mb-1 flex items-center gap-1">
         <BarChart2 className="w-3 h-3" />
@@ -40,9 +62,7 @@ export function OportunidadCard({ area, puntaje, gap, causa, accionClave }) {
         <h4 className="text-xs font-semibold text-amber-900 flex-1">
           {area}
         </h4>
-        <span className="px-2 py-1 bg-amber-600 text-white text-[10px] font-bold rounded flex items-center justify-center min-w-[50px]">
-          {puntaje}/100
-        </span>
+        <BadgePuntajeSVG puntaje={puntaje} bgColor="#d97706" width={60} height={24} />
       </div>
       <p className="text-[10px] text-amber-800 mb-1">
         <span className="font-semibold">Gap:</span> {gap}
@@ -74,36 +94,21 @@ export function RecomendacionMejorada({ rec, numero }) {
     <div className={`p-4 ${colores.bg} border-2 ${colores.border} rounded-xl mb-4`}>
       {/* Header */}
       <div className="flex items-start gap-3 mb-3">
-        <div 
-          className={`${colores.badge} text-white rounded-full font-bold flex-shrink-0`}
-          style={{ 
-            width: '32px',
-            height: '32px',
-            display: 'grid',
-            placeItems: 'center',
-            fontSize: '0.875rem',
-            lineHeight: 1
-          }}
-        >
-          {numero}
-        </div>
+        <CirculoNumeroSVG
+          numero={numero}
+          size={32}
+          bgColor={COLORES_HEX[colores.badge] || '#dc2626'}
+          fontSize={14}
+        />
         <div className="flex-1">
           <h3 className="text-sm font-bold text-slate-900 mb-1">
             {rec.titulo}
           </h3>
           <div className="flex flex-wrap gap-1.5">
-            <span className={`px-2 py-0.5 ${colores.badge} text-white text-[9px] font-semibold rounded`}>
-              {rec.prioridad}
-            </span>
-            <span className="px-2 py-0.5 bg-slate-200 text-slate-700 text-[9px] font-semibold rounded">
-              {rec.categoria}
-            </span>
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[9px] font-semibold rounded">
-              Impacto: {rec.impacto}
-            </span>
-            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-[9px] font-semibold rounded">
-              Esfuerzo: {rec.esfuerzo}
-            </span>
+            <BadgePrioridadSVG prioridad={rec.prioridad} />
+            <BadgeAtributoSVG texto={rec.categoria} bgColor="#e2e8f0" textColor="#334155" />
+            <BadgeAtributoSVG texto={`Impacto: ${rec.impacto}`} bgColor="#dbeafe" textColor="#1e40af" />
+            <BadgeAtributoSVG texto={`Esfuerzo: ${rec.esfuerzo}`} bgColor="#f3e8ff" textColor="#6b21a8" />
           </div>
         </div>
       </div>
@@ -121,11 +126,9 @@ export function RecomendacionMejorada({ rec, numero }) {
       </div>
 
       {/* ROI */}
-      <div className="mb-3 p-2 bg-emerald-100 rounded-lg border border-emerald-300">
-        <p className="text-[10px] font-bold text-emerald-900 flex items-center gap-1">
-          <Target className="w-3 h-3" />
-          ROI Estimado: {rec.roi}
-        </p>
+      <div className="mb-3 p-2 bg-emerald-100 rounded-lg border border-emerald-300 flex items-center gap-2">
+        <Target className="w-4 h-4 text-emerald-700 flex-shrink-0" />
+        <BadgeROISVG roi={rec.roi} />
       </div>
 
       {/* Grid: Pasos + Recursos */}
@@ -171,9 +174,7 @@ export function RecomendacionMejorada({ rec, numero }) {
         </h4>
         <div className="flex flex-wrap gap-1.5">
           {rec.kpis.map((kpi, idx) => (
-            <span key={idx} className="px-2 py-0.5 bg-white border border-slate-300 text-[9px] text-slate-700 rounded">
-              {kpi}
-            </span>
+            <BadgeKPISVG key={idx} texto={kpi} />
           ))}
         </div>
       </div>
@@ -194,44 +195,54 @@ export function MatrizPriorizacion({ recomendaciones }) {
         Matriz de Priorización (Impacto vs Esfuerzo)
       </h3>
       
-      <div className="relative" style={{ height: '200px', paddingLeft: '30px', paddingBottom: '25px' }}>
+      <div className="relative" style={{ height: '220px', paddingLeft: '40px', paddingBottom: '35px' }}>
+        
         {/* Contenedor del gráfico */}
         <div className="relative w-full h-full bg-white rounded-lg border-2 border-slate-300">
           {/* Ejes */}
           <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-400"></div>
           <div className="absolute top-0 bottom-0 left-0 w-0.5 bg-slate-400"></div>
           
-          {/* Labels de ejes */}
-          <div 
-            className="absolute text-[9px] font-semibold text-slate-600"
-            style={{ 
-              left: '-28px', 
-              top: '50%',
-              transform: 'translateY(-50%) rotate(-90deg)',
-              transformOrigin: 'center',
-              width: '80px',
-              textAlign: 'center'
-            }}
-          >
-            Impacto →
+          {/* Label eje Y - SVG rotado */}
+          <div style={{ position: 'absolute', left: '-50px', top: '50%', transform: 'translateY(-50%) rotate(-90deg)' }}>
+            <svg width="100" height="20" viewBox="0 0 100 20">
+              <text
+                x="50"
+                y="3"
+                textAnchor="middle"
+                dominantBaseline="central"
+                fill="#475569"
+                fontSize="9"
+                fontWeight="600"
+                fontFamily="system-ui, -apple-system, sans-serif"
+              >
+                Impacto →
+              </text>
+            </svg>
           </div>
-          <div 
-            className="absolute text-[9px] font-semibold text-slate-600"
-            style={{ 
-              bottom: '-20px', 
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '80px',
-              textAlign: 'center'
-            }}
-          >
-            Esfuerzo →
+          
+          {/* Label eje X - SVG */}
+          <div style={{ position: 'absolute', bottom: '-28px', left: '50%', transform: 'translateX(-50%)' }}>
+            <svg width="80" height="16" viewBox="0 0 80 16">
+              <text
+                x="40"
+                y="8"
+                textAnchor="middle"
+                dominantBaseline="central"
+                fill="#475569"
+                fontSize="9"
+                fontWeight="600"
+                fontFamily="system-ui, -apple-system, sans-serif"
+              >
+                Esfuerzo →
+              </text>
+            </svg>
           </div>
           
           {/* Cuadrantes - Labels */}
           <div 
             className="absolute text-[8px] text-green-600 font-semibold leading-tight"
-            style={{ top: '8px', right: '8px', textAlign: 'right' }}
+            style={{ top: '8px', left: '8px', textAlign: 'left' }}
           >
             Alto Impacto<br/>Bajo Esfuerzo
           </div>
@@ -248,27 +259,25 @@ export function MatrizPriorizacion({ recomendaciones }) {
             const x = (rec.esfuerzoNumerico / 10) * 100;
             const y = 100 - ((rec.impactoNumerico / 10) * 100); // Invertir Y
             
-            const color = rec.prioridad === 'Alta' ? 'bg-red-500' : 
-                         rec.prioridad === 'Media' ? 'bg-yellow-500' : 'bg-green-500';
+            const colorHex = rec.prioridad === 'Alta' ? '#ef4444' : 
+                           rec.prioridad === 'Media' ? '#eab308' : '#22c55e';
             
             return (
               <div
                 key={rec.id}
-                className={`absolute ${color} text-white font-bold shadow-lg border-2 border-white`}
+                className="absolute"
                 style={{
                   left: `calc(${x}% - 12px)`,
-                  top: `calc(${y}% - 12px)`,
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '50%',
-                  display: 'grid',
-                  placeItems: 'center',
-                  fontSize: '0.75rem',
-                  lineHeight: 1
+                  top: `calc(${y}% - 12px)`
                 }}
                 title={rec.titulo}
               >
-                {idx + 1}
+                <CirculoNumeroSVG
+                  numero={idx + 1}
+                  size={24}
+                  bgColor={colorHex}
+                  fontSize={10}
+                />
               </div>
             );
           })}
@@ -289,20 +298,27 @@ export function MatrizPriorizacion({ recomendaciones }) {
 }
 
 /**
- * Timeline/Roadmap trimestral
+ * Timeline/Roadmap semestral
  */
 export function RoadmapTimeline({ roadmap }) {
   return (
     <div className="space-y-2">
-      {roadmap.map((trimestre, idx) => (
+      {roadmap.map((periodo, idx) => (
         <div key={idx} className="flex gap-3">
           {/* Indicador temporal */}
           <div className="flex-shrink-0 w-16 text-center">
-            <div className="px-2 py-1 bg-blue-600 text-white rounded text-[9px] font-bold">
-              {trimestre.trimestre}
-            </div>
+            <BadgeSVG
+              texto={periodo.semestre}
+              width={64}
+              height={24}
+              bgColor="#2563eb"
+              textColor="#ffffff"
+              fontSize={9}
+              fontWeight="bold"
+              borderRadius={4}
+            />
             <div className="text-[8px] text-slate-500 mt-0.5">
-              {trimestre.mes}
+              {periodo.mes}
             </div>
           </div>
           
@@ -314,7 +330,7 @@ export function RoadmapTimeline({ roadmap }) {
           {/* Acciones */}
           <div className="flex-1 pb-2">
             <ul className="space-y-1">
-              {trimestre.acciones.map((accion, i) => (
+              {periodo.acciones.map((accion, i) => (
                 <li key={i} className="text-[10px] text-slate-700 flex items-start gap-1.5">
                   <Circle className="w-2 h-2 fill-blue-600 text-blue-600 flex-shrink-0 mt-1" />
                   <span>{accion}</span>
@@ -328,12 +344,13 @@ export function RoadmapTimeline({ roadmap }) {
   );
 }
 
+
 /**
  * Quick Wins destacados
  */
 export function QuickWinsSection({ quickWins }) {
   if (quickWins.length === 0) return null;
-  
+
   return (
     <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl">
       <div className="flex items-center gap-2 mb-3">
@@ -347,21 +364,18 @@ export function QuickWinsSection({ quickWins }) {
       </p>
       <div className="space-y-2">
         {quickWins.map((rec, idx) => (
-          <div key={rec.id} className="flex gap-2 items-start p-2 bg-white rounded-lg border border-green-200">
-            <div 
-              className="bg-green-600 text-white font-bold flex-shrink-0"
-              style={{ 
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                display: 'grid',
-                placeItems: 'center',
-                fontSize: '0.75rem',
-                lineHeight: 1
-              }}
-            >
-              {idx + 1}
-            </div>
+          <div
+            key={rec.id}
+            className="flex gap-2 items-start p-2 bg-white rounded-lg border border-green-200"
+          >
+            <CirculoNumeroSVG
+              numero={idx + 1}
+              size={20}
+              bgColor="#16a34a"
+              fontSize={10}
+            />
+
+            {/* ⬇️ Este div ahora está correctamente dentro del contenedor */}
             <div className="flex-1">
               <p className="text-[10px] font-semibold text-slate-900">
                 {rec.titulo}

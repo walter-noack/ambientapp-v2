@@ -137,10 +137,18 @@ export default function DetalleEvaluacion() {
     ? ((residuosReciclados / residuosTotales) * 100).toFixed(1)
     : '0';
 
-  // AGUA - NO EXISTE en tu API, usar valores por defecto o 0
+  // AGUA //
   const consumoAgua = Number(evaluacion?.consumoAgua || 0);
-  const aguaReutilizada = Number(evaluacion?.aguaReutilizada || 0);
-  const intensidadHidrica = evaluacion?.intensidadHidrica || null;
+  const intensidadHidrica = evaluacion?.intensidadHidrica?.valor ? {
+    valor: Number(evaluacion.intensidadHidrica.valor),
+    unidad: evaluacion.intensidadHidrica.unidad || 'L/persona'
+  } : null;
+
+  console.log('🔍 DEBUG AGUA:', {
+    consumoAgua,
+    intensidadHidrica,
+    evaluacionCompleta: evaluacion
+  });
 
   // REP - Ya existe
   const residuosRep = evaluacion?.productosREP || [];
@@ -173,7 +181,6 @@ export default function DetalleEvaluacion() {
     // Estructura esperada por InformePDF
     waterData: {
       consumoMensual: consumoAgua,           // ← Ahora con dato real
-      aguaReutilizada: aguaReutilizada,      // ← Agregado
       intensidadHidrica: intensidadHidrica   // ← Agregado
     },
 
@@ -285,7 +292,10 @@ export default function DetalleEvaluacion() {
         />
 
         {/* GESTIÓN DEL AGUA */}
-        <SeccionAgua evaluacion={evaluacion} />
+        <SeccionAgua
+          consumoAgua={consumoAgua}
+          intensidadHidrica={intensidadHidrica}
+        />
 
         {/* GESTIÓN DE RESIDUOS */}
         <SeccionResiduos

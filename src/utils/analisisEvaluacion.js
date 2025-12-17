@@ -361,7 +361,7 @@ export function generarRecomendacionesPriorizadas(evaluacion) {
 }
 
 /**
- * Genera el roadmap trimestral
+ * Genera el roadmap semestral (Chile usa semestres, no trimestres)
  */
 export function generarRoadmap(recomendaciones) {
   const altaPrioridad = recomendaciones.filter(r => r.prioridad === 'Alta');
@@ -369,29 +369,24 @@ export function generarRoadmap(recomendaciones) {
   
   return [
     {
-      trimestre: 'Q1 2025',
-      mes: 'Ene-Mar',
-      acciones: altaPrioridad.slice(0, 2).map(r => r.titulo)
-    },
-    {
-      trimestre: 'Q2 2025',
-      mes: 'Abr-Jun',
+      semestre: 'S1 2025',
+      mes: 'Ene-Jun',
       acciones: [
-        ...altaPrioridad.slice(2, 3).map(r => r.titulo),
+        ...altaPrioridad.slice(0, 2).map(r => r.titulo),
         ...mediaPrioridad.slice(0, 1).map(r => r.titulo)
       ]
     },
     {
-      trimestre: 'Q3 2025',
-      mes: 'Jul-Sep',
-      acciones: mediaPrioridad.slice(1, 3).map(r => r.titulo)
-    },
-    {
-      trimestre: 'Q4 2025',
-      mes: 'Oct-Dic',
-      acciones: ['Revisión anual de cumplimiento', 'Preparar nueva evaluación']
+      semestre: 'S2 2025',
+      mes: 'Jul-Dic',
+      acciones: [
+        ...altaPrioridad.slice(2, 3).map(r => r.titulo),
+        ...mediaPrioridad.slice(1, 2).map(r => r.titulo),
+        'Revisión anual de cumplimiento',
+        'Preparar nueva evaluación'
+      ]
     }
-  ].filter(q => q.acciones.length > 0);
+  ].filter(s => s.acciones.length > 0);
 }
 
 /**
