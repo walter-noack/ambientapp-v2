@@ -10,7 +10,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -24,10 +24,10 @@ export default function Login() {
     }
 
     setLoading(true);
-    
+
     try {
       const result = await login(email, password);
-      
+
       if (result.success) {
         navigate('/dashboard');
       } else {
@@ -43,13 +43,13 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-slate-50 to-blue-50 px-4">
       <div className="w-full max-w-md">
-        
+
         {/* Logo y título */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <img 
-              src="/logo-ambientapp.svg" 
-              alt="AmbientApp" 
+            <img
+              src="/logo-ambientapp.svg"
+              alt="AmbientApp"
               className="h-16"
             />
           </div>
@@ -64,7 +64,7 @@ export default function Login() {
         {/* Formulario */}
         <div className="card p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            
+
             {/* Error Alert */}
             {error && (
               <Alert type="danger">
@@ -91,22 +91,37 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
             />
+            
 
-            {/* Submit button */}
-            <Button
-              type="submit"
-              variant="primary"
-              className="w-full"
-              disabled={loading}
-            >
-              {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
-            </Button>
+                {/* ...campos... */}
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="w-full"
+                  disabled={loading}
+                >
+                  {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
+                </Button>
+
+                <div className="text-center text-xs text-slate-500 mt-2">
+                  ¿No tienes cuenta?{' '}
+                  <a
+                    href="/registro"
+                    className="text-primary-600 hover:text-primary-700 font-medium"
+                  >
+                    Crea una cuenta gratis
+                  </a>
+                </div>
+
+            
           </form>
         </div>
 
+
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-slate-500">
-          © {new Date().getFullYear()} AmbientApp. Todos los derechos reservados.
+          © {new Date().getFullYear()} AmbientApp. Creado por @mellamowalter.cl
         </div>
       </div>
     </div>

@@ -6,6 +6,7 @@ import MainLayout from './components/layout/MainLayout';
 
 // Pages
 import Login from './pages/Login';
+import Registro from './pages/Registro';
 import Dashboard from './pages/Dashboard';
 import ListaEvaluaciones from './pages/ListaEvaluaciones';
 import DetalleEvaluacion from './pages/DetalleEvaluacion';
@@ -16,6 +17,7 @@ import AcercaDe from './pages/AcercaDe';
 
 import UsuariosAdmin from './pages/Admin/UsuariosAdmin';
 import Perfil from './pages/Perfil';
+import Upgrade from './pages/Upgrade';
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -81,12 +83,20 @@ function PublicRoute({ children }) {
 export default function AppRouter() {
   return (
     <Routes>
-      {/* Ruta pública */}
+      {/* Rutas públicas */}
       <Route
         path="/login"
         element={
           <PublicRoute>
             <Login />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/registro"
+        element={
+          <PublicRoute>
+            <Registro />
           </PublicRoute>
         }
       />
@@ -115,6 +125,9 @@ export default function AppRouter() {
 
         {/* Perfil */}
         <Route path="perfil" element={<Perfil />} />
+
+        {/* Upgrade */}
+        <Route path="upgrade" element={<Upgrade />} />
 
         {/* Administración (solo admins) */}
         <Route

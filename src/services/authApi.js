@@ -10,3 +10,8 @@ export const updateProfile = async (data) => {
   const response = await api.put('/auth/profile', data);
   return response.data; // usuario actualizado
 };
+
+export const registrarUsuario = async (payload) => {
+  const res = await api.post('/auth/registro', payload);
+  return res.data; // debería ser { success, data: { user, token }, ... }
+};

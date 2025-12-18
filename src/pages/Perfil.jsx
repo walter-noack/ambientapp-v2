@@ -1,10 +1,13 @@
 // src/pages/Perfil.jsx
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getProfile } from '../services/authApi';
 import { useAuth } from '../context/AuthContext';
 import { Crown, Info, Sparkles } from 'lucide-react';
 
 export default function Perfil() {
+    const navigate = useNavigate();
+
     const { user: authUser, setUser: setAuthUser } = useAuth?.() || {};
     const [profile, setProfile] = useState(authUser || null);
     const [loading, setLoading] = useState(!authUser);
@@ -97,6 +100,16 @@ export default function Perfil() {
     const maxUsuarios = limites.maxUsuarios ?? (isPro ? 5 : 1);
     const usuariosActuales = limites.usuariosActuales ?? 1;
     const ultimoResetDiagnosticos = limites.ultimoResetDiagnosticos;
+
+    const handleUpgradeClick = (e) => {
+        e.preventDefault();
+        console.log('Upgrade click. isPro =', isPro, 'navigate type =', typeof navigate);
+        if (!isPro) {
+            navigate('/upgrade');
+        } else {
+            console.log('Usuario ya es Pro, no navega.');
+        }
+    };
 
     return (
         <div className="container-app py-6 space-y-6">
@@ -244,10 +257,10 @@ export default function Perfil() {
                                 <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                                     <div
                                         className={`h-2 rounded-full ${porcentajeUso >= 80
-                                                ? 'bg-red-400'
-                                                : porcentajeUso >= 60
-                                                    ? 'bg-amber-400'
-                                                    : 'bg-emerald-400'
+                                            ? 'bg-red-400'
+                                            : porcentajeUso >= 60
+                                                ? 'bg-amber-400'
+                                                : 'bg-emerald-400'
                                             }`}
                                         style={{ width: `${porcentajeUso}%` }}
                                     />
@@ -285,7 +298,32 @@ export default function Perfil() {
                     </div>
 
                     {/* Card Upgrade */}
-                    <UpgradeCard isPro={isPro} />
+
+                    <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl p-5 shadow-md">
+                        <div className="flex items-start gap-3">
+                            <Crown className="w-5 h-5 mt-0.5" />
+                            <div className="space-y-1">
+                                <h3 className="text-sm font-semibold">Upgrade a Plan Pro</h3>
+                                <p className="text-xs text-emerald-100">
+                                    Desbloquea diagnósticos ilimitados, múltiples usuarios, exportación a
+                                    PDF y recomendaciones completas para tu empresa.
+                                </p>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            className={`mt-4 inline-flex items-center justify-center w-full px-3 py-2 text-sm font-semibold rounded-lg border transition-colors
+    ${isPro
+                                    ? 'bg-white/20 text-white/80 border-white/20 cursor-not-allowed opacity-70'
+                                    : 'bg-white/10 hover:bg-white/20 border-white/30 text-white'}`}
+                            onClick={handleUpgradeClick}
+                            disabled={isPro}
+                            aria-label={isPro ? 'Ya tienes Plan Pro' : 'Ver beneficios del Plan Pro'}
+                        >
+                            {isPro ? 'Ya tienes Plan Pro' : 'Ver beneficios del Plan Pro'}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -317,48 +355,5 @@ function FeatureRow({ label, enabled, hint }) {
                 )}
             </div>
         </li>
-    );
-}
-
-function UpgradeCard({ isPro }) {
-    if (isPro) {
-        return (
-            <div className="bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-xl p-5 shadow-md">
-                <div className="flex items-start gap-3">
-                    <Crown className="w-5 h-5 mt-0.5" />
-                    <div className="space-y-1">
-                        <h3 className="text-sm font-semibold">Gracias por usar Plan Pro</h3>
-                        <p className="text-xs text-purple-100">
-                            Tienes acceso completo a diagnósticos ilimitados, exportación a PDF
-                            y recomendaciones avanzadas.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl p-5 shadow-md">
-            <div className="flex items-start gap-3">
-                <Crown className="w-5 h-5 mt-0.5" />
-                <div className="space-y-1">
-                    <h3 className="text-sm font-semibold">Upgrade a Plan Pro</h3>
-                    <p className="text-xs text-emerald-100">
-                        Desbloquea diagnósticos ilimitados, múltiples usuarios, exportación a
-                        PDF y recomendaciones completas para tu empresa.
-                    </p>
-                </div>
-            </div>
-            <button
-                type="button"
-                className="mt-4 inline-flex items-center justify-center w-full px-3 py-2 text-sm font-semibold bg-white/10 hover:bg-white/20 rounded-lg border border-white/30 transition-colors"
-                onClick={() => {
-                    alert('Upgrade a Pro (solo visual por ahora)');
-                }}
-            >
-                Ver beneficios del Plan Pro
-            </button>
-        </div>
     );
 }
