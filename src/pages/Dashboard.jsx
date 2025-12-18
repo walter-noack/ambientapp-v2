@@ -6,10 +6,12 @@ import { Card } from "../components/shared/ui/Card";
 import { BarChart3, TrendingUp, Calendar, Plus, Eye, Flame, Droplets, Recycle } from "lucide-react";
 import { Edit2, Copy, Trash2 } from 'lucide-react';
 import { getEvaluaciones, eliminarEvaluacion } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [evaluaciones, setEvaluaciones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [kpis, setKpis] = useState({
@@ -21,112 +23,159 @@ export default function Dashboard() {
     promResiduos: 0,
   });
 
- useEffect(() => {
-  async function load() {
-    try {
-      const response = await getEvaluaciones();
-      
-      // El backend devuelve { success: true, data: { diagnosticos: [...] } }
-      const data = response.data?.diagnosticos || [];
-      
-      const ordenadas = [...data].sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      );
+  //Límites y plan
+  // Plan
+  const tipoSuscripcion = user?.tipoSuscripcion || 'free';
+  const isPro = tipoSuscripcion === 'pro';
 
-      const ultimas5 = ordenadas.slice(0, 5);
-      setEvaluaciones(ultimas5);
+  // Datos de plan desde planInfo
+  const planInfo = user?.planInfo || {};
+  const diagnosticosTotales = planInfo.diagnosticosTotales ?? 0;      // p.ej. 4
+  const diagnosticosRestantes = planInfo.diagnosticosRestantes ?? 0;  // p.ej. 2
 
-      const total = data.length;
-      
-      // Adaptar campos del backend: puntuacionGeneral en lugar de finalScore
-      const nivelPromedio =
-        total > 0
-          ? data.reduce((acc, e) => acc + (e.puntuacionGeneral || 0), 0) / total
-          : 0;
+  // Diagnósticos ya usados = totales - restantes (si tenemos ambos)
+  const diagnosticosUsados =
+    diagnosticosTotales && diagnosticosRestantes >= 0
+      ? diagnosticosTotales - diagnosticosRestantes
+      : 0;
 
-      const fechas = data
-        .map((ev) => new Date(ev.createdAt))
-        .sort((a, b) => b - a);
-      const ultimaFecha = fechas[0]?.toLocaleDateString("es-CL") || "-";
+  // Lógica:
+  // - Pro => siempre puede
+  // - Free => puede si diagnosticosRestantes > 0
+  let canCreateNewEvaluation = true;
 
-      // Adaptar campos del backend
-      const promCarbono =
-        total > 0
-          ? data.reduce((acc, e) => acc + (e.carbono?.puntuacion || 0), 0) / total
-          : 0;
-
-      const promAgua =
-        total > 0
-          ? data.reduce((acc, e) => acc + (e.agua?.puntuacion || 0), 0) / total
-          : 0;
-
-      const promResiduos =
-        total > 0
-          ? data.reduce((acc, e) => acc + (e.residuos?.puntuacion || 0), 0) / total
-          : 0;
-
-      setKpis({
-        total,
-        nivelPromedio,
-        ultimaFecha,
-        promCarbono,
-        promAgua,
-        promResiduos,
-      });
-    } catch (error) {
-      console.error("Error cargando dashboard:", error);
-      setEvaluaciones([]);
-    } finally {
-      setLoading(false);
+  if (!isPro) {
+    if (diagnosticosTotales > 0) {
+      canCreateNewEvaluation = diagnosticosRestantes > 0;
+    } else {
+      // si no tenemos datos de plan, no bloqueamos
+      canCreateNewEvaluation = true;
     }
   }
 
-  load();
-}, []);
+  {/* info de uso para Free */ }
+  {
+    !isPro && diagnosticosTotales > 0 && (
+      <p className="mt-3 text-sm text-primary-100">
+        Diagnósticos este mes:{" "}
+        <span className="font-semibold">
+          {diagnosticosUsados} / {diagnosticosTotales}
+        </span>
+        {" "}({diagnosticosRestantes} restantes)
+      </p>
+    )
+  }
 
-const handleEliminar = async (id) => {
-  if (window.confirm('¿Estás seguro de eliminar esta evaluación? Esta acción no se puede deshacer.')) {
-    try {
-      await eliminarEvaluacion(id);
-      
-      // Actualizar lista eliminando el item
-      setEvaluaciones(prev => prev.filter(ev => ev._id !== id));
-      
-      // Recalcular KPIs
-      const nuevasEvaluaciones = evaluaciones.filter(ev => ev._id !== id);
-      const total = nuevasEvaluaciones.length;
-      
-      if (total > 0) {
-        const nivelPromedio = nuevasEvaluaciones.reduce((acc, e) => acc + (e.finalScore || 0), 0) / total;
-        const promCarbono = nuevasEvaluaciones.reduce((acc, e) => acc + (e.scores?.carbonScore || 0), 0) / total;
-        const promAgua = nuevasEvaluaciones.reduce((acc, e) => acc + (e.scores?.waterScore || 0), 0) / total;
-        const promResiduos = nuevasEvaluaciones.reduce((acc, e) => acc + (e.scores?.wasteScore || 0), 0) / total;
-        
-        setKpis(prev => ({
-          ...prev,
+  useEffect(() => {
+    async function load() {
+      try {
+        const response = await getEvaluaciones();
+
+        // El backend devuelve { success: true, data: { diagnosticos: [...] } }
+        const data = response.data?.diagnosticos || [];
+
+        const ordenadas = [...data].sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        );
+
+        const ultimas5 = ordenadas.slice(0, 5).map(ev => ({
+          ...ev,
+          period: `${ev.semestre}-${ev.anio}`,
+          finalScore: ev.puntuacionGeneral || 0
+        }));
+        setEvaluaciones(ultimas5);
+
+        const total = data.length;
+
+        // Adaptar campos del backend: puntuacionGeneral en lugar de finalScore
+        const nivelPromedio =
+          total > 0
+            ? data.reduce((acc, e) => acc + (e.puntuacionGeneral || 0), 0) / total
+            : 0;
+
+        const fechas = data
+          .map((ev) => new Date(ev.createdAt))
+          .sort((a, b) => b - a);
+        const ultimaFecha = fechas[0]?.toLocaleDateString("es-CL") || "-";
+
+        // Adaptar campos del backend
+        const promCarbono =
+          total > 0
+            ? data.reduce((acc, e) => acc + (e.carbono?.puntuacion || 0), 0) / total
+            : 0;
+
+        const promAgua =
+          total > 0
+            ? data.reduce((acc, e) => acc + (e.agua?.puntuacion || 0), 0) / total
+            : 0;
+
+        const promResiduos =
+          total > 0
+            ? data.reduce((acc, e) => acc + (e.residuos?.puntuacion || 0), 0) / total
+            : 0;
+
+        setKpis({
           total,
           nivelPromedio,
+          ultimaFecha,
           promCarbono,
           promAgua,
-          promResiduos
-        }));
-      } else {
-        setKpis({
-          total: 0,
-          nivelPromedio: 0,
-          ultimaFecha: null,
-          promCarbono: 0,
-          promAgua: 0,
-          promResiduos: 0,
+          promResiduos,
         });
+      } catch (error) {
+        console.error("Error cargando dashboard:", error);
+        setEvaluaciones([]);
+      } finally {
+        setLoading(false);
       }
-      
-      alert('Evaluación eliminada correctamente');
-    } catch (error) {
-      alert('Error al eliminar la evaluación. Intenta nuevamente.');
     }
-  }
-};
+
+    load();
+  }, []);
+
+  const handleEliminar = async (id) => {
+    if (window.confirm('¿Estás seguro de eliminar esta evaluación? Esta acción no se puede deshacer.')) {
+      try {
+        await eliminarEvaluacion(id);
+
+        // Actualizar lista eliminando el item
+        setEvaluaciones(prev => prev.filter(ev => ev._id !== id));
+
+        // Recalcular KPIs
+        const nuevasEvaluaciones = evaluaciones.filter(ev => ev._id !== id);
+        const total = nuevasEvaluaciones.length;
+
+        if (total > 0) {
+          const nivelPromedio = nuevasEvaluaciones.reduce((acc, e) => acc + (e.finalScore || 0), 0) / total;
+          const promCarbono = nuevasEvaluaciones.reduce((acc, e) => acc + (e.scores?.carbonScore || 0), 0) / total;
+          const promAgua = nuevasEvaluaciones.reduce((acc, e) => acc + (e.scores?.waterScore || 0), 0) / total;
+          const promResiduos = nuevasEvaluaciones.reduce((acc, e) => acc + (e.scores?.wasteScore || 0), 0) / total;
+
+          setKpis(prev => ({
+            ...prev,
+            total,
+            nivelPromedio,
+            promCarbono,
+            promAgua,
+            promResiduos
+          }));
+        } else {
+          setKpis({
+            total: 0,
+            nivelPromedio: 0,
+            ultimaFecha: null,
+            promCarbono: 0,
+            promAgua: 0,
+            promResiduos: 0,
+          });
+        }
+
+        alert('Evaluación eliminada correctamente');
+      } catch (error) {
+        alert('Error al eliminar la evaluación. Intenta nuevamente.');
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -151,13 +200,44 @@ const handleEliminar = async (id) => {
               </p>
             </div>
 
-            <Link
-              to="/evaluaciones/nueva"
-              className="flex items-center gap-2 px-6 py-3 bg-white text-primary-600 rounded-xl font-semibold hover:bg-primary-50 transition-colors shadow-lg"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Nuevo Diagnóstico</span>
-            </Link>
+
+
+            <div className="flex flex-col items-end gap-2"> {/* ✅ Nuevo contenedor */}
+              <Link
+                to={canCreateNewEvaluation ? "/evaluaciones/nueva" : "#"}
+                onClick={(e) => {
+                  if (!canCreateNewEvaluation) {
+                    e.preventDefault();
+                    alert('Has alcanzado el límite de diagnósticos para tu Plan Free. Actualiza a Pro para diagnósticos ilimitados.');
+                  }
+                }}
+                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-colors shadow-lg ${canCreateNewEvaluation
+                    ? "bg-white text-primary-600 hover:bg-primary-50"
+                    : "bg-white/60 text-slate-400 cursor-not-allowed"
+                  }`}
+              >
+                <Plus className="w-5 h-5" />
+                <span>Nuevo Diagnóstico</span>
+              </Link>
+
+              {/* ✅ Nuevo texto de estado de diagnósticos */}
+              {!isPro && diagnosticosTotales > 0 && (
+                <p className="text-xs text-primary-100/80 text-right">
+                  Diagnósticos:{" "}
+                  <span className="font-semibold">
+                    {diagnosticosUsados} / {diagnosticosTotales}
+                  </span>
+                  {" "}(<span className="font-semibold">{diagnosticosRestantes}</span> restantes)
+                </p>
+              )}
+              {/* ✅ Mensaje de límite alcanzado */}
+              {!isPro && !canCreateNewEvaluation && (
+                <p className="text-xs text-red-200 text-right font-medium">
+                  Límite alcanzado. ¡Actualiza a Pro!
+                </p>
+              )}
+            </div>
+
           </div>
         </div>
       </div>
@@ -335,10 +415,19 @@ const handleEliminar = async (id) => {
 
                 <tbody className="divide-y divide-slate-200">
                   {evaluaciones.map((ev) => {
+                    // Usar los mismos rangos que el backend
                     let nivel = "bajo";
-                    if (ev.finalScore >= 75) nivel = "avanzado";
-                    else if (ev.finalScore >= 50) nivel = "intermedio";
-                    else if (ev.finalScore >= 25) nivel = "basico";
+                    let nivelTexto = "Bajo";
+                    if (ev.finalScore >= 80) {
+                      nivel = "avanzado";
+                      nivelTexto = "Avanzado";
+                    } else if (ev.finalScore >= 60) {
+                      nivel = "intermedio";
+                      nivelTexto = "Intermedio";
+                    } else if (ev.finalScore >= 30) {
+                      nivel = "basico";
+                      nivelTexto = "Básico";
+                    }
 
                     return (
                       <tr key={ev._id} className="hover:bg-slate-50 transition-colors">
@@ -353,7 +442,7 @@ const handleEliminar = async (id) => {
                         </td>
                         <td className="py-4 px-6 text-center">
                           <Badge variant={nivel}>
-                            {nivel.charAt(0).toUpperCase() + nivel.slice(1)}
+                            {nivelTexto}
                           </Badge>
                         </td>
 

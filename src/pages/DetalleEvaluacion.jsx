@@ -5,6 +5,7 @@ import { ArrowLeft, FileDown, Edit2, Copy, Trash2 } from "lucide-react";
 import { getEvaluacionById, eliminarEvaluacion } from "../services/api";
 import { exportarComponenteAPDF } from '../utils/exportarPDF';
 import InformePDF from '../components/pdf/InformePDF';
+import { useAuth } from "../context/AuthContext";
 
 // Componentes de secciones
 import { SeccionPortada } from "../components/detalle/SeccionPortada";
@@ -25,6 +26,9 @@ export default function DetalleEvaluacion() {
   // Estados para PDF
   const [generandoPDF, setGenerandoPDF] = useState(false);
   const [mostrarInforme, setMostrarInforme] = useState(false);
+
+  const { user } = useAuth();
+  const canExportPDF = user?.features?.exportarPDF === true;
 
   useEffect(() => {
     async function load() {
@@ -51,6 +55,11 @@ export default function DetalleEvaluacion() {
 
   // Handler para exportar PDF
   const handleExportarPDF = async () => {
+    if (!canExportPDF) {
+      alert('Tu Plan Free no permite exportar PDF. Actualiza a Pro para habilitar esta función.');
+      return;
+    }
+
     try {
       setGenerandoPDF(true);
       setMostrarInforme(true);
@@ -58,19 +67,12 @@ export default function DetalleEvaluacion() {
       // Esperar a que se renderice completamente
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Generar nombre de archivo
       const companyName = evaluacion?.companyName || 'Empresa';
       const period = evaluacion?.period || 'Periodo';
       const filename = `Diagnostico_Ambiental_${companyName.replace(/\s+/g, '_')}_${period.replace(/\s+/g, '_')}.pdf`;
 
-
-
-      // Generar PDF - CAMBIO AQUÍ: No validar result.success
       await exportarComponenteAPDF('pdf-root', filename);
 
-
-
-      // Ocultar el componente después de un breve delay
       setTimeout(() => {
         setMostrarInforme(false);
       }, 500);
@@ -216,69 +218,105 @@ export default function DetalleEvaluacion() {
             <p className="text-sm text-slate-500">  Período: {evaluacion.semestre}-{evaluacion.anio}</p>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Exportar PDF */}
-            <button
-              onClick={handleExportarPDF}
-              disabled={generandoPDF}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${generandoPDF
-                ? 'bg-gray-400 cursor-not-allowed text-white'
-                : 'bg-primary-600 hover:bg-primary-700 text-white'
-                }`}
-              title="Exportar PDF"
-            >
-              {generandoPDF ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span>Generando...</span>
-                </>
-              ) : (
-                <>
-                  <FileDown className="w-4 h-4" />
-                  <span>Exportar PDF</span>
-                </>
+          <div className="flex items-start gap-4">
+            {/* Bloque Exportar PDF (botón + mensaje) */}
+            <div className="flex flex-col items-end gap-1">
+              <button
+                onClick={handleExportarPDF}
+                disabled={generandoPDF || !canExportPDF}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${generandoPDF
+                    ? "bg-gray-400 cursor-not-allowed text-white"
+                    : canExportPDF
+                      ? "bg-primary-600 hover:bg-primary-700 text-white"
+                      : "bg-gray-300 text-gray-600 cursor-not-allowed"
+                  }`}
+                title={
+                  canExportPDF
+                    ? "Exportar PDF"
+                    : "Función disponible sólo para el Plan Pro"
+                }
+              >
+                {generandoPDF ? (
+                  <>
+                    <svg
+                      className="animate-spin h-4 w-4"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    <span>Generando...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="w-4 h-4" />
+                    <span>Exportar PDF</span>
+                  </>
+                )}
+              </button>
+
+              {!canExportPDF && (
+                <p className="text-[11px] text-slate-400 text-right">
+                  Función disponible sólo para el{" "}
+                  <span className="font-semibold">Plan Pro</span>.
+                </p>
               )}
-            </button>
+            </div>
 
-            {/* Editar */}
-            <Link
-              to={`/evaluaciones/editar/${id}`}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-semibold text-sm"
-              title="Editar"
-            >
-              <Edit2 className="w-4 h-4" />
-            </Link>
+            {/* Bloque de botones de acciones alineados */}
+            <div className="flex items-center gap-2">
+              {/* Editar */}
+              <Link
+                to={`/evaluaciones/editar/${id}`}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-semibold text-sm"
+                title="Editar"
+              >
+                <Edit2 className="w-4 h-4" />
+              </Link>
 
-            {/* Duplicar */}
-            <button
-              onClick={handleDuplicar}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors font-semibold text-sm"
-              title="Duplicar"
-            >
-              <Copy className="w-4 h-4" />
-            </button>
+              {/* Duplicar */}
+              <button
+                onClick={handleDuplicar}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors font-semibold text-sm"
+                title="Duplicar"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
 
-            {/* Eliminar */}
-            <button
-              onClick={handleEliminar}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-semibold text-sm"
-              title="Eliminar"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+              {/* Eliminar */}
+              <button
+                onClick={handleEliminar}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-semibold text-sm"
+                title="Eliminar"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
 
-            {/* Volver */}
-            <Link
-              to="/dashboard"
-              className="inline-flex items-center gap-2 px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-semibold text-sm transition-colors"
-              title="Volver al dashboard"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
+              {/* Volver */}
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-2 px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-semibold text-sm transition-colors"
+                title="Volver al dashboard"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
+
+
         </div>
       </div>
 

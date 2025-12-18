@@ -1,3 +1,4 @@
+// src/context/AuthContext.jsx
 import { createContext, useContext, useState, useEffect } from 'react';
 import { loginUser, logoutUser, getCurrentUser } from '../services/api';
 
@@ -22,17 +23,22 @@ export function AuthProvider({ children }) {
         const token = localStorage.getItem('token');
         if (token) {
           const response = await getCurrentUser();
-          if (response.success) {
+          // IMPORTANTE: aquí asumimos que response.data.user es el perfil completo
+          if (response.success && response.data?.user) {
             setUser(response.data.user);
           } else {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
+            setUser(null);
           }
+        } else {
+          setUser(null);
         }
       } catch (error) {
         console.error('Error verificando autenticación:', error);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        setUser(null);
       } finally {
         setLoading(false);
       }
@@ -46,21 +52,20 @@ export function AuthProvider({ children }) {
       const response = await loginUser({ email, password });
 
       if (response.success) {
-        // El token ya se guarda automáticamente en loginUser (api.js)
-        // Solo necesitamos actualizar el estado del usuario
+        // AQUI: asegurarse que response.data.user ya incluye limites + features
         setUser(response.data.user);
         return { success: true };
       } else {
         return {
           success: false,
-          error: response.message || 'Error al iniciar sesión'
+          error: response.message || 'Error al iniciar sesión',
         };
       }
     } catch (error) {
       console.error('Error en login:', error);
       return {
         success: false,
-        error: error.message || 'Error de conexión'
+        error: error.message || 'Error de conexión',
       };
     }
   };
@@ -78,14 +83,11 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
+    setUser,   // <- lo exponemos para que Perfil u otros puedan actualizar
     loading,
     login,
     logout,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

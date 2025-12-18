@@ -76,10 +76,10 @@ const verificarLimiteDiagnosticos = (req, res, next) => {
   if (!req.user.puedeHacerDiagnostico()) {
     return res.status(403).json({
       success: false,
-      message: 'Has alcanzado el límite de diagnósticos mensuales',
+      message: 'Has alcanzado el límite de diagnósticos de tu plan',
+      code: 'DIAGNOSTIC_LIMIT_REACHED',
       planActual: req.user.tipoSuscripcion,
-      diagnosticosRealizados: req.user.limites.diagnosticosRealizados,
-      diagnosticosTotales: req.user.limites.diagnosticosMes
+      planInfo: req.user.planInfo // usa el virtual para frontend
     });
   }
   next();

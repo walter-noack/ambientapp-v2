@@ -265,7 +265,7 @@ export default function About() {
               <AlertTriangle className="w-6 h-6 text-orange-600 flex-shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-bold text-orange-900 mb-2">Aviso Importante</h4>
-                <p className="text-orange-800 text-sm">
+                <p className="text-orange-800 text-sm text-justify">
                   AmbientApp <strong>NO sustituye</strong> inventarios oficiales de gases de efecto invernadero,
                   reportes ESG, diagnósticos normativos ni auditorías ambientales. Las estimaciones
                   <strong> NO representan inventarios certificados</strong> ni cumplen requisitos de reportabilidad

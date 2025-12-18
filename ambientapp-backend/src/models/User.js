@@ -135,7 +135,9 @@ const userSchema = new mongoose.Schema({
     default: Date.now
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
 // Middleware: Encriptar password antes de guardar
@@ -155,42 +157,63 @@ userSchema.methods.compararPassword = function(passwordIngresado) {
   return bcrypt.compare(passwordIngresado, this.password);
 };
 
-// Método: Verificar si puede hacer diagnósticos
-userSchema.methods.puedeHacerDiagnostico = function() {
-  const limites = this.limites;
+// Método: Verificar y resetear límites mensuales si es necesario
+userSchema.methods.verificarYResetearLimites = function() {
+  if (this.tipoSuscripcion === 'pro') {
+    return; // Pro no tiene límites
+  }
   
-  // Si es Pro, siempre puede (ilimitado)
-  if (this.tipoSuscripcion === 'pro') return true;
-  
-  // Si es Free, verificar límite mensual
   const ahora = new Date();
-  const unMesAtras = new Date(limites.ultimoResetDiagnosticos);
-  unMesAtras.setMonth(unMesAtras.getMonth() + 1);
+  const ultimoReset = new Date(this.limites.ultimoResetDiagnosticos);
   
-  // Si pasó un mes, resetear contador
-  if (ahora >= unMesAtras) {
+  // Verificar si pasó un mes desde el último reset
+  const unMesDespues = new Date(ultimoReset);
+  unMesDespues.setMonth(unMesDespues.getMonth() + 1);
+  
+  if (ahora >= unMesDespues) {
     this.limites.diagnosticosRealizados = 0;
     this.limites.ultimoResetDiagnosticos = ahora;
   }
+};
+
+// Método: Verificar si puede hacer diagnósticos
+userSchema.methods.puedeHacerDiagnostico = function() {
+  // Si es Pro, siempre puede (ilimitado)
+  if (this.tipoSuscripcion === 'pro') {
+    return true;
+  }
   
-  return limites.diagnosticosRealizados < limites.diagnosticosMes;
+  // Verificar y resetear límites si es necesario
+  this.verificarYResetearLimites();
+  
+  // Si es Free, verificar límite mensual
+  return this.limites.diagnosticosRealizados < this.limites.diagnosticosMes;
 };
 
 // Método: Registrar uso de diagnóstico
-userSchema.methods.registrarDiagnostico = function() {
-  if (this.tipoSuscripcion === 'free') {
-    this.limites.diagnosticosRealizados += 1;
-    return this.save();
+userSchema.methods.registrarDiagnostico = async function() {
+  if (this.tipoSuscripcion === 'pro') {
+    return; // Pro no consume
   }
-  return Promise.resolve();
+  
+  // Verificar y resetear límites si es necesario
+  this.verificarYResetearLimites();
+  
+  // Incrementar contador
+  this.limites.diagnosticosRealizados += 1;
+  await this.save();
 };
 
-// Método: Obtener información de plan actual
-userSchema.methods.getInfoPlan = function() {
+// Virtual: planInfo (para frontend)
+userSchema.virtual('planInfo').get(function() {
+  // Verificar y resetear límites antes de devolver info
+  this.verificarYResetearLimites();
+  
   if (this.tipoSuscripcion === 'pro') {
     return {
       plan: 'Pro',
-      diagnosticosRestantes: 'Ilimitados',
+      diagnosticosTotales: Infinity,
+      diagnosticosRestantes: Infinity,
       usuariosRestantes: this.limites.maxUsuarios - this.limites.usuariosActuales,
       caracteristicas: [
         'Diagnósticos ilimitados',
@@ -205,11 +228,15 @@ userSchema.methods.getInfoPlan = function() {
     };
   }
   
-  const diagnosticosRestantes = this.limites.diagnosticosMes - this.limites.diagnosticosRealizados;
+  const diagnosticosRestantes = Math.max(
+    0,
+    this.limites.diagnosticosMes - this.limites.diagnosticosRealizados
+  );
+  
   return {
     plan: 'Free',
-    diagnosticosRestantes: Math.max(0, diagnosticosRestantes),
     diagnosticosTotales: this.limites.diagnosticosMes,
+    diagnosticosRestantes: diagnosticosRestantes,
     usuariosRestantes: 0,
     caracteristicas: [
       '4 diagnósticos mensuales',
@@ -221,6 +248,11 @@ userSchema.methods.getInfoPlan = function() {
     ],
     features: this.features
   };
+});
+
+// Método: Obtener información de plan actual (mantener por compatibilidad)
+userSchema.methods.getInfoPlan = function() {
+  return this.planInfo;
 };
 
 // Método: Actualizar a plan Pro

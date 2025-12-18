@@ -36,6 +36,9 @@ const registro = async (req, res) => {
       telefono
     });
     
+    // Verificar y resetear límites (por si acaso)
+    user.verificarYResetearLimites();
+    
     // Generar token
     const token = generarToken(user._id);
     
@@ -50,14 +53,16 @@ const registro = async (req, res) => {
           email: user.email,
           empresa: user.empresa,
           tipoSuscripcion: user.tipoSuscripcion,
+          role: user.role,
           features: user.features,
-          planInfo: user.getInfoPlan()
+          planInfo: user.planInfo // ✅ usar virtual en lugar de método
         },
         token
       }
     });
     
   } catch (error) {
+    console.error('Error al registrar usuario:', error);
     res.status(500).json({
       success: false,
       message: 'Error al registrar usuario',
@@ -109,6 +114,9 @@ const login = async (req, res) => {
       });
     }
     
+    // Verificar y resetear límites antes de devolver info
+    user.verificarYResetearLimites();
+    
     // Actualizar último acceso
     user.ultimoAcceso = Date.now();
     await user.save();
@@ -127,14 +135,16 @@ const login = async (req, res) => {
           email: user.email,
           empresa: user.empresa,
           tipoSuscripcion: user.tipoSuscripcion,
+          role: user.role,
           features: user.features,
-          planInfo: user.getInfoPlan()
+          planInfo: user.planInfo // ✅ usar virtual en lugar de método
         },
         token
       }
     });
     
   } catch (error) {
+    console.error('Error al iniciar sesión:', error);
     res.status(500).json({
       success: false,
       message: 'Error al iniciar sesión',
@@ -143,12 +153,24 @@ const login = async (req, res) => {
   }
 };
 
-// @desc    Obtener usuario actual
-// @route   GET /api/auth/me
+// @desc    Obtener perfil del usuario autenticado
+// @route   GET /api/auth/profile
 // @access  Private
 const obtenerPerfil = async (req, res) => {
   try {
-    const user = req.user;
+    // req.user viene del middleware de autenticación
+    const user = await User.findById(req.user.id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
+    
+    // Verificar y resetear límites antes de devolver
+    user.verificarYResetearLimites();
+    await user.save(); // Guardar si hubo reset
     
     res.status(200).json({
       success: true,
@@ -162,8 +184,9 @@ const obtenerPerfil = async (req, res) => {
           telefono: user.telefono,
           tipoSuscripcion: user.tipoSuscripcion,
           estadoSuscripcion: user.estadoSuscripcion,
+          role: user.role,
           features: user.features,
-          planInfo: user.getInfoPlan(),
+          planInfo: user.planInfo, // ✅ incluye planInfo automáticamente
           emailVerificado: user.emailVerificado,
           ultimoAcceso: user.ultimoAcceso,
           createdAt: user.createdAt
@@ -172,6 +195,7 @@ const obtenerPerfil = async (req, res) => {
     });
     
   } catch (error) {
+    console.error('Error al obtener perfil:', error);
     res.status(500).json({
       success: false,
       message: 'Error al obtener perfil',
@@ -180,8 +204,113 @@ const obtenerPerfil = async (req, res) => {
   }
 };
 
+// @desc    Obtener usuario actual (alias de obtenerPerfil para /api/auth/me)
+// @route   GET /api/auth/me
+// @access  Private
+const obtenerUsuarioActual = async (req, res) => {
+  try {
+    const user = req.user;
+    
+    // Verificar y resetear límites
+    user.verificarYResetearLimites();
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        user: {
+          id: user._id,
+          nombre: user.nombre,
+          email: user.email,
+          empresa: user.empresa,
+          rut: user.rut,
+          telefono: user.telefono,
+          tipoSuscripcion: user.tipoSuscripcion,
+          estadoSuscripcion: user.estadoSuscripcion,
+          role: user.role,
+          features: user.features,
+          planInfo: user.planInfo,
+          emailVerificado: user.emailVerificado,
+          ultimoAcceso: user.ultimoAcceso,
+          createdAt: user.createdAt
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error al obtener usuario actual:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener perfil',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Actualizar perfil del usuario
+// @route   PUT /api/auth/profile
+// @access  Private
+const actualizarPerfil = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
+    
+    // Campos actualizables
+    const camposPermitidos = ['nombre', 'empresa', 'rut', 'telefono'];
+    
+    camposPermitidos.forEach(campo => {
+      if (req.body[campo] !== undefined) {
+        user[campo] = req.body[campo];
+      }
+    });
+    
+    await user.save();
+    
+    // Verificar límites antes de devolver
+    user.verificarYResetearLimites();
+    
+    res.status(200).json({
+      success: true,
+      message: 'Perfil actualizado exitosamente',
+      data: {
+        user: {
+          id: user._id,
+          nombre: user.nombre,
+          email: user.email,
+          empresa: user.empresa,
+          rut: user.rut,
+          telefono: user.telefono,
+          tipoSuscripcion: user.tipoSuscripcion,
+          estadoSuscripcion: user.estadoSuscripcion,
+          role: user.role,
+          features: user.features,
+          planInfo: user.planInfo,
+          emailVerificado: user.emailVerificado,
+          ultimoAcceso: user.ultimoAcceso,
+          createdAt: user.createdAt
+        }
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error al actualizar perfil:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al actualizar perfil',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   registro,
   login,
-  obtenerPerfil
+  obtenerPerfil,
+  obtenerUsuarioActual,
+  actualizarPerfil
 };

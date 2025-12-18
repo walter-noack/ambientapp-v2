@@ -68,10 +68,12 @@ export const login = async (credentials) => {
   }
 };
 
+// CAMBIO PRINCIPAL: usar /auth/profile en lugar de /auth/me
 export const obtenerPerfil = async () => {
   try {
-    const response = await api.get('/auth/me');
+    const response = await api.get('/auth/profile'); // <- CAMBIO AQUÍ
     if (response.data.success) {
+      // Guardar el perfil completo (con limites y features)
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
     }
     return response.data;

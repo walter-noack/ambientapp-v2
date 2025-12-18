@@ -5,9 +5,12 @@ import { Loading } from "../components/shared/ui/Loading";
 import { Badge } from "../components/shared/ui/Badge";
 import { Card } from "../components/shared/ui/Card";
 import { Eye, Edit2, Copy, Trash2, Search, Filter, Plus } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 export default function ListaEvaluaciones() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
   const [evaluaciones, setEvaluaciones] = useState([]);
   const [evaluacionesFiltradas, setEvaluacionesFiltradas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,16 +18,44 @@ export default function ListaEvaluaciones() {
   const [filtroNivel, setFiltroNivel] = useState("todos");
   const [ordenamiento, setOrdenamiento] = useState("recientes");
 
+  // ===== LIMITES Y PLAN (MISMA LÓGICA QUE EN DASHBOARD) =====
+  const tipoSuscripcion = user?.tipoSuscripcion || "free";
+  const isPro = tipoSuscripcion === "pro";
+
+  const planInfo = user?.planInfo || {};
+  const diagnosticosTotales = planInfo.diagnosticosTotales ?? 0;      // ej: 4
+  const diagnosticosRestantes = planInfo.diagnosticosRestantes ?? 0;  // ej: 2
+
+  const diagnosticosUsados =
+    diagnosticosTotales && diagnosticosRestantes >= 0
+      ? diagnosticosTotales - diagnosticosRestantes
+      : 0;
+
+  let canCreateNewEvaluation = true;
+  if (!isPro) {
+    if (diagnosticosTotales > 0) {
+      canCreateNewEvaluation = diagnosticosRestantes > 0;
+    } else {
+      canCreateNewEvaluation = true; // si no sabemos el plan, no bloqueamos
+    }
+  }
+  // =========================================================
+
   useEffect(() => {
     async function load() {
       try {
         const response = await getEvaluaciones();
 
-        // El backend devuelve { success: true, data: { diagnosticos: [...] } }
         const data = response.data?.diagnosticos || [];
 
-        setEvaluaciones(data);
-        setEvaluacionesFiltradas(data);
+        const dataMapeada = data.map((ev) => ({
+          ...ev,
+          period: `${ev.semestre}-${ev.anio}`,
+          finalScore: ev.puntuacionGeneral || 0,
+        }));
+
+        setEvaluaciones(dataMapeada);
+        setEvaluacionesFiltradas(dataMapeada);
       } catch (error) {
         console.error("Error cargando evaluaciones:", error);
         setEvaluaciones([]);
@@ -42,32 +73,36 @@ export default function ListaEvaluaciones() {
 
     // Búsqueda por nombre de empresa
     if (busqueda.trim()) {
-      resultado = resultado.filter(ev =>
+      resultado = resultado.filter((ev) =>
         ev.companyName.toLowerCase().includes(busqueda.toLowerCase())
       );
     }
 
-    // Filtro por nivel (usar puntuacionGeneral del backend)
+    // Filtro por nivel
     if (filtroNivel !== "todos") {
-      resultado = resultado.filter(ev => {
+      resultado = resultado.filter((ev) => {
         const score = ev.puntuacionGeneral || 0;
-        if (filtroNivel === "avanzado") return score >= 75;
-        if (filtroNivel === "intermedio") return score >= 50 && score < 75;
-        if (filtroNivel === "basico") return score >= 25 && score < 50;
-        if (filtroNivel === "bajo") return score < 25;
+        if (filtroNivel === "avanzado") return score >= 80;
+        if (filtroNivel === "intermedio") return score >= 60 && score < 80;
+        if (filtroNivel === "basico") return score >= 30 && score < 60;
+        if (filtroNivel === "bajo") return score < 30;
         return true;
       });
     }
 
-    // Ordenamiento (usar puntuacionGeneral del backend)
+    // Ordenamiento
     if (ordenamiento === "recientes") {
       resultado.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     } else if (ordenamiento === "antiguos") {
       resultado.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     } else if (ordenamiento === "puntaje-alto") {
-      resultado.sort((a, b) => (b.puntuacionGeneral || 0) - (a.puntuacionGeneral || 0));
+      resultado.sort(
+        (a, b) => (b.puntuacionGeneral || 0) - (a.puntuacionGeneral || 0)
+      );
     } else if (ordenamiento === "puntaje-bajo") {
-      resultado.sort((a, b) => (a.puntuacionGeneral || 0) - (b.puntuacionGeneral || 0));
+      resultado.sort(
+        (a, b) => (a.puntuacionGeneral || 0) - (b.puntuacionGeneral || 0)
+      );
     } else if (ordenamiento === "empresa") {
       resultado.sort((a, b) => a.companyName.localeCompare(b.companyName));
     }
@@ -76,19 +111,29 @@ export default function ListaEvaluaciones() {
   }, [busqueda, filtroNivel, ordenamiento, evaluaciones]);
 
   const handleDuplicar = (id) => {
-    if (window.confirm('¿Deseas duplicar esta evaluación?')) {
+    if (!canCreateNewEvaluation) {
+      alert(
+        "Has alcanzado el límite de diagnósticos para tu Plan Free. Actualiza a Pro para diagnósticos ilimitados."
+      );
+      return;
+    }
+    if (window.confirm("¿Deseas duplicar esta evaluación?")) {
       navigate(`/evaluaciones/duplicar/${id}`);
     }
   };
 
   const handleEliminar = async (id) => {
-    if (window.confirm('¿Estás seguro de eliminar esta evaluación? Esta acción no se puede deshacer.')) {
+    if (
+      window.confirm(
+        "¿Estás seguro de eliminar esta evaluación? Esta acción no se puede deshacer."
+      )
+    ) {
       try {
         await eliminarEvaluacion(id);
-        setEvaluaciones(prev => prev.filter(ev => ev._id !== id));
-        alert('Evaluación eliminada correctamente');
+        setEvaluaciones((prev) => prev.filter((ev) => ev._id !== id));
+        alert("Evaluación eliminada correctamente");
       } catch (error) {
-        alert('Error al eliminar la evaluación. Intenta nuevamente.');
+        alert("Error al eliminar la evaluación. Intenta nuevamente.");
       }
     }
   };
@@ -104,7 +149,6 @@ export default function ListaEvaluaciones() {
   return (
     <div className="min-h-screen bg-slate-50 py-8">
       <div className="container-app">
-
         {/* Header */}
         <div className="flex justify-between items-start mb-8">
           <div>
@@ -112,23 +156,58 @@ export default function ListaEvaluaciones() {
               Diagnósticos Ambientales
             </h1>
             <p className="text-slate-600">
-              Listado completo de todas las evaluaciones realizadas ({evaluaciones.length})
+              Listado completo de todas las evaluaciones realizadas (
+              {evaluaciones.length})
             </p>
           </div>
 
-          <Link
-            to="/evaluaciones/nueva"
-            className="flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold transition-colors shadow-lg"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Nuevo Diagnóstico</span>
-          </Link>
+          {/* Botón + info de uso */}
+          <div className="flex flex-col items-end gap-2">
+            <Link
+              to={canCreateNewEvaluation ? "/evaluaciones/nueva" : "#"}
+              onClick={(e) => {
+                if (!canCreateNewEvaluation) {
+                  e.preventDefault();
+                  alert(
+                    "Has alcanzado el límite de diagnósticos para tu Plan Free. Actualiza a Pro para diagnósticos ilimitados."
+                  );
+                }
+              }}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-colors shadow-lg ${
+                canCreateNewEvaluation
+                  ? "bg-primary-600 hover:bg-primary-700 text-white"
+                  : "bg-gray-300 text-gray-600 cursor-not-allowed"
+              }`}
+            >
+              <Plus className="w-5 h-5" />
+              <span>Nuevo Diagnóstico</span>
+            </Link>
+
+            {!isPro && diagnosticosTotales > 0 && (
+              <p className="text-xs text-slate-600 text-right">
+                Diagnósticos este mes:{" "}
+                <span className="font-semibold">
+                  {diagnosticosUsados} / {diagnosticosTotales}
+                </span>{" "}
+                (
+                <span className="font-semibold">
+                  {diagnosticosRestantes}
+                </span>{" "}
+                restantes)
+              </p>
+            )}
+
+            {!isPro && !canCreateNewEvaluation && (
+              <p className="text-xs text-red-500 text-right font-medium">
+                Límite alcanzado. ¡Actualiza a Pro!
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Filtros y búsqueda */}
         <Card className="p-6 mb-6">
           <div className="grid md:grid-cols-3 gap-4">
-
             {/* Búsqueda */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -150,10 +229,10 @@ export default function ListaEvaluaciones() {
                 className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none"
               >
                 <option value="todos">Todos los niveles</option>
-                <option value="avanzado">Avanzado (≥75)</option>
-                <option value="intermedio">Intermedio (50-74)</option>
-                <option value="basico">Básico (25-49)</option>
-                <option value="bajo">Bajo (&lt;25)</option>
+                <option value="avanzado">Avanzado (≥80)</option>
+                <option value="intermedio">Intermedio (60-79)</option>
+                <option value="basico">Básico (30-59)</option>
+                <option value="bajo">Bajo (&lt;30)</option>
               </select>
             </div>
 
@@ -169,13 +248,15 @@ export default function ListaEvaluaciones() {
               <option value="puntaje-bajo">Menor puntaje</option>
               <option value="empresa">Nombre (A-Z)</option>
             </select>
-
           </div>
 
           {/* Resumen de filtros */}
           {(busqueda || filtroNivel !== "todos") && (
             <div className="mt-4 flex items-center gap-2 text-sm text-slate-600">
-              <span>Mostrando {evaluacionesFiltradas.length} de {evaluaciones.length} evaluaciones</span>
+              <span>
+                Mostrando {evaluacionesFiltradas.length} de {evaluaciones.length}{" "}
+                evaluaciones
+              </span>
               <button
                 onClick={() => {
                   setBusqueda("");
@@ -213,34 +294,58 @@ export default function ListaEvaluaciones() {
               <table className="w-full">
                 <thead className="bg-slate-50 text-slate-600 text-sm border-y border-slate-200">
                   <tr>
-                    <th className="text-left py-4 px-6 font-semibold">Empresa</th>
-                    <th className="text-left py-4 px-6 font-semibold">Período</th>
-                    <th className="text-left py-4 px-6 font-semibold">Fecha</th>
-                    <th className="text-center py-4 px-6 font-semibold">Puntaje</th>
-                    <th className="text-center py-4 px-6 font-semibold">Nivel</th>
-                    <th className="text-center py-4 px-6 font-semibold">Acciones</th>
+                    <th className="text-center py-4 px-6 font-semibold">
+                      Empresa
+                    </th>
+                    <th className="text-center py-4 px-6 font-semibold">
+                      Período
+                    </th>
+                    <th className="text-center py-4 px-6 font-semibold">
+                      Fecha
+                    </th>
+                    <th className="text-center py-4 px-6 font-semibold">
+                      Puntaje
+                    </th>
+                    <th className="text-center py-4 px-6 font-semibold">
+                      Nivel
+                    </th>
+                    <th className="text-center py-4 px-6 font-semibold">
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-slate-200">
                   {evaluacionesFiltradas.map((ev) => {
-                    const score = ev.puntuacionGeneral || 0;
+                    const score = ev.finalScore || 0;
                     let nivel = "bajo";
-                    if (score >= 75) nivel = "avanzado";
-                    else if (score >= 50) nivel = "intermedio";
-                    else if (score >= 25) nivel = "basico";
+                    let nivelTexto = "Bajo";
 
-                    // Construir period del backend (semestre + año)
-                    const period = `${ev.semestre}-${ev.anio}`;
-
+                    if (score >= 80) {
+                      nivel = "avanzado";
+                      nivelTexto = "Avanzado";
+                    } else if (score >= 60) {
+                      nivel = "intermedio";
+                      nivelTexto = "Intermedio";
+                    } else if (score >= 30) {
+                      nivel = "basico";
+                      nivelTexto = "Básico";
+                    }
 
                     return (
-                      <tr key={ev._id} className="hover:bg-slate-50 transition-colors">
+                      <tr
+                        key={ev._id}
+                        className="hover:bg-slate-50 transition-colors"
+                      >
                         <td className="py-4 px-6">
-                          <p className="font-semibold text-slate-900">{ev.companyName}</p>
+                          <p className="font-semibold text-center-900">
+                            {ev.companyName}
+                          </p>
                         </td>
-                        <td className="py-4 px-6 text-slate-600">{ev.period}</td>
-                        <td className="py-4 px-6 text-slate-600 text-sm">
+                        <td className="py-4 px-6 text-center-600">
+                          {ev.period}
+                        </td>
+                        <td className="py-4 px-6 text-center-600 text-sm">
                           {new Date(ev.createdAt).toLocaleDateString("es-CL")}
                         </td>
                         <td className="py-4 px-6 text-center">
@@ -249,9 +354,7 @@ export default function ListaEvaluaciones() {
                           </span>
                         </td>
                         <td className="py-4 px-6 text-center">
-                          <Badge variant={nivel}>
-                            {nivel.charAt(0).toUpperCase() + nivel.slice(1)}
-                          </Badge>
+                          <Badge variant={nivel}>{nivelTexto}</Badge>
                         </td>
 
                         <td className="py-4 px-6">
@@ -297,7 +400,6 @@ export default function ListaEvaluaciones() {
             </div>
           )}
         </Card>
-
       </div>
     </div>
   );

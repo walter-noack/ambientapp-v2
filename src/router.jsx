@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 
 // Layout
@@ -14,6 +14,9 @@ import EditarEvaluacion from './pages/EditarEvaluacion';
 import PreviewPDF from './pages/PreviewPDF';
 import AcercaDe from './pages/AcercaDe';
 
+import UsuariosAdmin from './pages/Admin/UsuariosAdmin';
+import Perfil from './pages/Perfil';
+
 // Protected Route Component
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -28,6 +31,29 @@ function ProtectedRoute({ children }) {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
+
+// Admin Route Component (solo para admins)
+function AdminRoute({ children }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="spinner" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
@@ -76,7 +102,7 @@ export default function AppRouter() {
         <Route path="evaluaciones" element={<ListaEvaluaciones />} />
         <Route path="/evaluaciones/nueva" element={<NuevaEvaluacion />} />
         <Route path="/evaluaciones/editar/:id" element={<NuevaEvaluacion modoEdicion={true} />} />
-        <Route path="/evaluaciones/duplicar/:id" element={<NuevaEvaluacion modoDuplicar={true} />}/>
+        <Route path="/evaluaciones/duplicar/:id" element={<NuevaEvaluacion modoDuplicar={true} />} />
 
         {/* Detalle */}
         <Route path="detalle/:id" element={<DetalleEvaluacion />} />
@@ -86,6 +112,19 @@ export default function AppRouter() {
 
         {/* Acerca de */}
         <Route path="acerca-de" element={<AcercaDe />} />
+
+        {/* Perfil */}
+        <Route path="perfil" element={<Perfil />} />
+
+        {/* Administración (solo admins) */}
+        <Route
+          path="admin/usuarios"
+          element={
+            <AdminRoute>
+              <UsuariosAdmin />
+            </AdminRoute>
+          }
+        />
       </Route>
 
       {/* 404 */}

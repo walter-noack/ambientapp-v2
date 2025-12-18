@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const morgan = require('morgan'); // opcional, para logs más limpios
 
 // Inicializar app
 const app = express();
@@ -13,11 +14,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Middleware de logging
-app.use((req, res, next) => {
-  console.log(`📨 ${req.method} ${req.path}`);
-  console.log('Body:', req.body);
-  next();
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev')); // logs automáticos en desarrollo
+}
 
 // Conectar a MongoDB
 const connectDB = async () => {
@@ -35,6 +34,7 @@ connectDB();
 // Importar rutas
 const authRoutes = require('./src/routes/authRoutes');
 const diagnosticoRoutes = require('./src/routes/diagnosticoRoutes');
+const adminRoutes = require('./src/routes/adminRoutes');
 
 // Ruta raíz
 app.get('/', (req, res) => {
@@ -44,7 +44,8 @@ app.get('/', (req, res) => {
     status: 'OK',
     endpoints: {
       auth: '/api/auth',
-      diagnosticos: '/api/diagnosticos'
+      diagnosticos: '/api/diagnosticos',
+      admin: '/api/admin'
     }
   });
 });
@@ -52,6 +53,7 @@ app.get('/', (req, res) => {
 // Montar rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/diagnosticos', diagnosticoRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Manejo de errores global
 app.use((err, req, res, next) => {
@@ -73,10 +75,17 @@ app.listen(PORT, () => {
   console.log(`   - POST /api/auth/registro`);
   console.log(`   - POST /api/auth/login`);
   console.log(`   - GET  /api/auth/me`);
+  console.log(`   - GET  /api/auth/profile`);
+  console.log(`   - PUT  /api/auth/profile`);
   console.log(`   - POST /api/diagnosticos`);
   console.log(`   - GET  /api/diagnosticos`);
   console.log(`   - GET  /api/diagnosticos/:id`);
   console.log(`   - PUT  /api/diagnosticos/:id`);
   console.log(`   - DELETE /api/diagnosticos/:id`);
   console.log(`   - GET  /api/diagnosticos/estadisticas`);
+  console.log(`   - GET  /api/admin/users`);
+  console.log(`   - GET  /api/admin/users/:id`);
+  console.log(`   - PUT  /api/admin/users/:id`);
+  console.log(`   - DELETE /api/admin/users/:id`);
+  console.log(`   - GET  /api/admin/stats`);
 });
