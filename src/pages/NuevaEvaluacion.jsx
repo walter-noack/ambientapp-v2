@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/shared/ui/Button';
 import { Card } from '../components/shared/ui/Card';
-import { getEvaluacionById } from '../services/api';
 import { validarPasoPorNombre } from '../utils/validaciones';
+import { getEvaluacionById, createEvaluacion, updateEvaluacion } from '../services/api';
 
 import { Paso1InfoGeneral } from '../components/formulario/Paso1InfoGeneral';
 import { Paso2HuellaCarbono } from '../components/formulario/Paso2HuellaCarbono';
@@ -210,10 +210,26 @@ export default function NuevaEvaluacion({ modoEdicion = false, modoDuplicar = fa
   };
 
   const handleSubmit = async () => {
-    console.log('Datos finales:', formData);
-    // TODO: Implementar guardado real con API
-    alert(modoEdicion ? '¡Diagnóstico actualizado! (Modo demo)' : '¡Diagnóstico guardado! (Modo demo)');
-    navigate('/dashboard');
+    try {
+      console.log('📤 Enviando diagnóstico al backend...', formData);
+
+      if (modoEdicion && id) {
+        // Actualizar diagnóstico existente
+        const response = await updateEvaluacion(id, formData);
+        console.log('✅ Diagnóstico actualizado:', response);
+        alert('¡Diagnóstico actualizado exitosamente!');
+      } else {
+        // Crear nuevo diagnóstico
+        const response = await createEvaluacion(formData);
+        console.log('✅ Diagnóstico creado:', response);
+        alert('¡Diagnóstico guardado exitosamente!');
+      }
+
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('❌ Error al guardar diagnóstico:', error);
+      alert(error.message || 'Error al guardar el diagnóstico. Por favor intenta nuevamente.');
+    }
   };
 
   // Loading mientras carga datos en modo edición

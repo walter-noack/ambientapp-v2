@@ -21,67 +21,68 @@ export default function Dashboard() {
     promResiduos: 0,
   });
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const data = await getEvaluaciones();
-        
+ useEffect(() => {
+  async function load() {
+    try {
+      const response = await getEvaluaciones();
+      
+      // El backend devuelve { success: true, data: { diagnosticos: [...] } }
+      const data = response.data?.diagnosticos || [];
+      
+      const ordenadas = [...data].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
 
-        const ordenadas = [...data].sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-        );
+      const ultimas5 = ordenadas.slice(0, 5);
+      setEvaluaciones(ultimas5);
 
-        const ultimas5 = ordenadas.slice(0, 5);
-        setEvaluaciones(ultimas5);
+      const total = data.length;
+      
+      // Adaptar campos del backend: puntuacionGeneral en lugar de finalScore
+      const nivelPromedio =
+        total > 0
+          ? data.reduce((acc, e) => acc + (e.puntuacionGeneral || 0), 0) / total
+          : 0;
 
-        const total = data.length;
-        const nivelPromedio =
-          total > 0
-            ? data.reduce((acc, e) => acc + (e.finalScore || 0), 0) / total
-            : 0;
+      const fechas = data
+        .map((ev) => new Date(ev.createdAt))
+        .sort((a, b) => b - a);
+      const ultimaFecha = fechas[0]?.toLocaleDateString("es-CL") || "-";
 
-        const fechas = data
-          .map((ev) => new Date(ev.createdAt))
-          .sort((a, b) => b - a);
-        const ultimaFecha = fechas[0]?.toLocaleDateString("es-CL") || "-";
+      // Adaptar campos del backend
+      const promCarbono =
+        total > 0
+          ? data.reduce((acc, e) => acc + (e.carbono?.puntuacion || 0), 0) / total
+          : 0;
 
-        const promCarbono =
-          total > 0
-            ? data.reduce((acc, e) => acc + (e.scores?.carbonScore || 0), 0) / total
-            : 0;
+      const promAgua =
+        total > 0
+          ? data.reduce((acc, e) => acc + (e.agua?.puntuacion || 0), 0) / total
+          : 0;
 
-        const promAgua =
-          total > 0
-            ? data.reduce((acc, e) => acc + (e.scores?.waterScore || 0), 0) / total
-            : 0;
+      const promResiduos =
+        total > 0
+          ? data.reduce((acc, e) => acc + (e.residuos?.puntuacion || 0), 0) / total
+          : 0;
 
-        const promResiduos =
-          total > 0
-            ? data.reduce((acc, e) => acc + (e.scores?.wasteScore || 0), 0) / total
-            : 0;
-
-        setKpis({
-          total,
-          nivelPromedio,
-          ultimaFecha,
-          promCarbono,
-          promAgua,
-          promResiduos,
-        });
-      } catch (error) {
-        console.error("Error cargando dashboard:", error);
-      } finally {
-        setLoading(false);
-      }
+      setKpis({
+        total,
+        nivelPromedio,
+        ultimaFecha,
+        promCarbono,
+        promAgua,
+        promResiduos,
+      });
+    } catch (error) {
+      console.error("Error cargando dashboard:", error);
+      setEvaluaciones([]);
+    } finally {
+      setLoading(false);
     }
-
-    load();
-  }, []);
-const handleDuplicar = (id) => {
-  if (window.confirm('¿Deseas duplicar esta evaluación?')) {
-    navigate(`/evaluaciones/duplicar/${id}`);
   }
-};
+
+  load();
+}, []);
 
 const handleEliminar = async (id) => {
   if (window.confirm('¿Estás seguro de eliminar esta evaluación? Esta acción no se puede deshacer.')) {

@@ -1,11 +1,22 @@
 import { GraficoDonutCarbono } from '../shared/charts/GraficoDonutCarbono';
 import { Flame, Zap, Factory, Lightbulb } from 'lucide-react';
-import { formatDecimal } from '../../utils/formatNumbers';
 
 export function SeccionCarbono({ alcance1, alcance2 }) {
-  const total = alcance1 + alcance2;
-  const porcentajeA1 = total > 0 ? ((alcance1 / total) * 100).toFixed(1) : 0;
-  const porcentajeA2 = total > 0 ? ((alcance2 / total) * 100).toFixed(1) : 0;
+  // Los valores vienen en kg del backend, convertir a toneladas
+  const alcance1Ton = alcance1 / 1000;
+  const alcance2Ton = alcance2 / 1000;
+  const totalTon = alcance1Ton + alcance2Ton;
+  
+  const porcentajeA1 = totalTon > 0 ? ((alcance1Ton / totalTon) * 100).toFixed(1) : 0;
+  const porcentajeA2 = totalTon > 0 ? ((alcance2Ton / totalTon) * 100).toFixed(1) : 0;
+
+  // Función para formatear números con comas chilenas
+  const formatNumber = (num) => {
+    return num.toLocaleString('es-CL', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
 
   return (
     <section className="bg-white rounded-2xl p-8 shadow-lg border border-slate-200">
@@ -22,14 +33,14 @@ export function SeccionCarbono({ alcance1, alcance2 }) {
         {/* Gráfico donut */}
         <div className="flex flex-col items-center justify-center">
           <div className="w-full max-w-xs relative">
-            <GraficoDonutCarbono alcance1={alcance1} alcance2={alcance2} />
+            <GraficoDonutCarbono alcance1={alcance1Ton} alcance2={alcance2Ton} />
             
             {/* Total al centro */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center">
                 <p className="text-sm text-slate-500">Total</p>
                 <p className="text-3xl font-bold text-slate-900">
-                  {formatDecimal(total)}
+                  {formatNumber(totalTon)}
                 </p>
                 <p className="text-xs text-slate-500">tCO₂e</p>
               </div>
@@ -51,7 +62,7 @@ export function SeccionCarbono({ alcance1, alcance2 }) {
                 </p>
               </div>
               <p className="text-3xl font-bold text-emerald-600 mb-1">
-                {formatDecimal(alcance1)}
+                {formatNumber(alcance1Ton)}
               </p>
               <p className="text-sm text-emerald-700 mb-2">
                 tCO₂e ({porcentajeA1}%)
@@ -71,7 +82,7 @@ export function SeccionCarbono({ alcance1, alcance2 }) {
                 </p>
               </div>
               <p className="text-3xl font-bold text-sky-600 mb-1">
-                {formatDecimal(alcance2)}
+                {formatNumber(alcance2Ton)}
               </p>
               <p className="text-sm text-sky-700 mb-2">
                 tCO₂e ({porcentajeA2}%)

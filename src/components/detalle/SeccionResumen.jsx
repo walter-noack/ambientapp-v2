@@ -1,26 +1,29 @@
 import { Flame, Droplets, Recycle } from 'lucide-react';
 
 export function SeccionResumen({ evaluacion }) {
-  const { carbonScore, waterScore, wasteScore } = evaluacion.scores || {};
+  // Extraer puntuaciones del backend
+  const carbonScore = evaluacion?.carbono?.puntuacion || 0;
+  const waterScore = evaluacion?.agua?.puntuacion || 0;
+  const wasteScore = evaluacion?.residuos?.puntuacion || 0;
 
   const kpis = [
     {
       label: "Carbono",
-      valor: carbonScore || 0,
+      valor: carbonScore,
       unidad: "/ 100",
       color: "#ef4444",
       icon: Flame
     },
     {
       label: "Agua",
-      valor: waterScore || 0,
+      valor: waterScore,
       unidad: "/ 100",
       color: "#3b82f6",
       icon: Droplets
     },
     {
       label: "Residuos",
-      valor: wasteScore || 0,
+      valor: wasteScore,
       unidad: "/ 100",
       color: "#10b981",
       icon: Recycle

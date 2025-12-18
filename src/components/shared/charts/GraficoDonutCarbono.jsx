@@ -41,16 +41,34 @@ export function GraficoDonutCarbono({ alcance1, alcance2 }) {
               font: {
                 size: 13,
               },
+              color: '#334155', // Color del texto de la leyenda
             },
           },
+          datalabels: {
+            display: false
+          },
           tooltip: {
+            backgroundColor: '#1e293b', // Fondo oscuro
+            titleColor: '#ffffff', // Título en blanco
+            bodyColor: '#ffffff', // Cuerpo en blanco
+            borderColor: '#475569',
+            borderWidth: 1,
+            padding: 12,
+            displayColors: true,
             callbacks: {
-              label: function(context) {
+              label: function (context) {
                 const label = context.label || '';
                 const value = context.parsed || 0;
                 const total = alcance1 + alcance2;
                 const percentage = ((value / total) * 100).toFixed(1);
-                return `${label}: ${value.toFixed(2)} tCO₂e (${percentage}%)`;
+
+                // Formatear el valor con 2 decimales y coma como separador
+                const valorFormateado = value.toLocaleString('es-CL', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                });
+
+                return `${label}: ${valorFormateado} tCO₂e (${percentage}%)`;
               }
             }
           }

@@ -30,21 +30,24 @@ export default function DetalleEvaluacion() {
     async function load() {
       try {
         setLoading(true);
-        const data = await getEvaluacionById(id);
+        const response = await getEvaluacionById(id);
 
-        console.log('📦 Datos recibidos de la API:', data); // ← AGREGAR
-        console.log('📦 Tipo de data:', typeof data); // ← AGREGAR
-        console.log('📦 Keys de data:', Object.keys(data || {})); // ← AGREGAR
+        // El backend devuelve { success: true, data: { diagnostico: {...} } }
+        const data = response.data?.diagnostico || null;
+
+
 
         setEvaluacion(data);
       } catch (error) {
         console.error('Error:', error);
+        setEvaluacion(null);
       } finally {
         setLoading(false);
       }
     }
     load();
   }, [id]);
+
 
   // Handler para exportar PDF
   const handleExportarPDF = async () => {
@@ -60,12 +63,12 @@ export default function DetalleEvaluacion() {
       const period = evaluacion?.period || 'Periodo';
       const filename = `Diagnostico_Ambiental_${companyName.replace(/\s+/g, '_')}_${period.replace(/\s+/g, '_')}.pdf`;
 
-      console.log('🎯 Generando PDF:', filename);
+
 
       // Generar PDF - CAMBIO AQUÍ: No validar result.success
       await exportarComponenteAPDF('pdf-root', filename);
 
-      console.log('✅ PDF generado exitosamente');
+
 
       // Ocultar el componente después de un breve delay
       setTimeout(() => {
@@ -119,8 +122,9 @@ export default function DetalleEvaluacion() {
   };
 
   // ===== PREPARAR DATOS PARA EL PDF =====
-  const alcance1 = Number(evaluacion?.alcance1 || 0);
-  const alcance2 = Number(evaluacion?.alcance2 || 0);
+  // Datos de carbono del backend
+  const alcance1 = Number(evaluacion?.carbono?.emisionesScope1 || 0);
+  const alcance2 = Number(evaluacion?.carbono?.emisionesScope2 || 0);
   const totalCarbono = alcance1 + alcance2;
 
   const emisiones = {
@@ -130,34 +134,28 @@ export default function DetalleEvaluacion() {
     totalKg: totalCarbono
   };
 
-  // RESIDUOS - Ya existen en tu API
-  const residuosTotales = Number(evaluacion?.residuosGenerados || 0);
-  const residuosReciclados = Number(evaluacion?.residuosValorizados || 0);
+  // RESIDUOS - del backend
+  const residuosTotales = Number(evaluacion?.residuos?.generados || 0);
+  const residuosReciclados = Number(evaluacion?.residuos?.valorizados || 0);
   const tasaValorizacion = residuosTotales > 0
     ? ((residuosReciclados / residuosTotales) * 100).toFixed(1)
     : '0';
 
-  // AGUA //
-  const consumoAgua = Number(evaluacion?.consumoAgua || 0);
-  const intensidadHidrica = evaluacion?.intensidadHidrica?.valor ? {
-    valor: Number(evaluacion.intensidadHidrica.valor),
-    unidad: evaluacion.intensidadHidrica.unidad || 'L/persona'
+  // AGUA - del backend
+  const consumoAgua = Number(evaluacion?.agua?.consumoTotal || 0);
+  const intensidadHidrica = evaluacion?.agua?.consumoPerCapita ? {
+    valor: Number(evaluacion.agua.consumoPerCapita),
+    unidad: evaluacion.agua.tipoMedicion === 'persona' ? 'L/persona' : 'L/unidad'
   } : null;
 
-  console.log('🔍 DEBUG AGUA:', {
-    consumoAgua,
-    intensidadHidrica,
-    evaluacionCompleta: evaluacion
-  });
-
-  // REP - Ya existe
+  // REP - del backend
   const residuosRep = evaluacion?.productosREP || [];
 
-  // SCORES - Ya existen
-  const carbonScore = Number(evaluacion?.scores?.carbonScore || 80);
-  const waterScore = Number(evaluacion?.scores?.waterScore || 85);
-  const wasteScore = Number(evaluacion?.scores?.wasteScore || 90);
-  const puntajeGlobal = ((carbonScore + waterScore + wasteScore) / 3).toFixed(1);
+  // SCORES - del backend (usar puntuaciones reales)
+  const carbonScore = Number(evaluacion?.carbono?.puntuacion || 0);
+  const waterScore = Number(evaluacion?.agua?.puntuacion || 0);
+  const wasteScore = Number(evaluacion?.residuos?.puntuacion || 0);
+  const puntajeGlobal = Number(evaluacion?.puntuacionGeneral || 0);
 
   // TEXTOS INTERPRETATIVOS
   const textoRadar = `El perfil ambiental muestra un mejor desempeño en gestión hídrica (${waterScore} pts), mientras que la principal oportunidad de mejora se encuentra en huella de carbono (${carbonScore} pts).`;
@@ -168,36 +166,44 @@ export default function DetalleEvaluacion() {
     } La mayor contribución proviene de ${alcance1 > alcance2 ? 'combustibles (Alcance 1)' : 'electricidad (Alcance 2)'}.`;
 
   const textoRep = residuosRep.length > 0
-    ? `Para el año 2024, el porcentaje promedio de valorización es ${tasaValorizacion}%. Considerando ${residuosTotales.toLocaleString('es-CL')} kg de residuos, la gestión REP requiere seguimiento anual.`
+    ? `Para el año ${evaluacion.anio}, el porcentaje promedio de valorización es ${tasaValorizacion}%. Considerando ${residuosTotales.toLocaleString('es-CL')} kg de residuos, la gestión REP requiere seguimiento anual.`
     : 'No se registraron productos prioritarios sujetos a Ley REP para el período evaluado.';
 
-  const nivelGlobal = puntajeGlobal >= 70 ? 'Alto' : puntajeGlobal >= 40 ? 'Básico' : 'Inicial';
+  const nivelGlobal = evaluacion?.nivelDesempeno || 'Básico';
   const textoGlobal = `El puntaje global es ${puntajeGlobal}/100 (nivel ${nivelGlobal}). Se recomienda mantener seguimiento anual a metas de valorización REP.`;
 
   // Preparar objeto evaluacion adaptado para InformePDF
   const evaluacionParaPDF = {
     ...evaluacion,
 
+    // Construir period del backend
+    period: `${evaluacion?.semestre}-${evaluacion?.anio}`,
+
     // Estructura esperada por InformePDF
     waterData: {
-      consumoMensual: consumoAgua,           // ← Ahora con dato real
-      intensidadHidrica: intensidadHidrica   // ← Agregado
+      consumoMensual: consumoAgua,
+      intensidadHidrica: intensidadHidrica
     },
 
     wasteData: {
       residuosTotales: residuosTotales,
       residuosReciclados: residuosReciclados
-    }
+    },
+
+    // Agregar alcances para compatibilidad
+    alcance1: alcance1,
+    alcance2: alcance2,
+
+    // Scores para compatibilidad
+    scores: {
+      carbonScore: carbonScore,
+      waterScore: waterScore,
+      wasteScore: wasteScore
+    },
+
+    finalScore: puntajeGlobal
   };
 
-  console.log('✅ Datos preparados para PDF:', {
-    emisiones,
-    residuosRep,
-    evaluacionParaPDF
-  });
-
-  console.log('🎯 Estado evaluacion:', evaluacion);
-  console.log('🎯 evaluacion existe?:', !!evaluacion);
   return (
     <div className="min-h-screen bg-slate-50">
       {/* HEADER FIJO */}
@@ -207,7 +213,7 @@ export default function DetalleEvaluacion() {
             <h1 className="text-xl font-bold text-slate-800">
               Diagnóstico Ambiental - {evaluacion.companyName}
             </h1>
-            <p className="text-sm text-slate-500">Período: {evaluacion.period}</p>
+            <p className="text-sm text-slate-500">  Período: {evaluacion.semestre}-{evaluacion.anio}</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -287,8 +293,8 @@ export default function DetalleEvaluacion() {
 
         {/* HUELLA DE CARBONO */}
         <SeccionCarbono
-          alcance1={evaluacion.alcance1 || 15.5}
-          alcance2={evaluacion.alcance2 || 8.3}
+          alcance1={alcance1}
+          alcance2={alcance2}
         />
 
         {/* GESTIÓN DEL AGUA */}
@@ -299,8 +305,8 @@ export default function DetalleEvaluacion() {
 
         {/* GESTIÓN DE RESIDUOS */}
         <SeccionResiduos
-          generados={evaluacion.residuosGenerados || 2500}
-          valorizados={evaluacion.residuosValorizados || 1800}
+          generados={residuosTotales}
+          valorizados={residuosReciclados}
         />
 
         {/* PRODUCTOS PRIORITARIOS LEY REP */}

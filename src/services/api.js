@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Configuración base de axios
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -9,7 +9,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
-/*
+
 // Interceptor para agregar token a todas las peticiones
 api.interceptors.request.use(
   (config) => {
@@ -29,251 +29,147 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Token inválido o expirado
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       window.location.href = '/login';
     }
     return Promise.reject(error);
   }
 );
-*/
-// ================================
-// AUTH
-// ================================
-export const loginUser = async (credentials) => {
-  // 🔓 BYPASS TEMPORAL
-  return {
-    token: 'fake-token-' + Date.now(),
-    user: {
-      email: credentials.email,
-      name: 'Usuario Demo',
-      id: 'demo-123'
-    }
-  };
-};
 
-export const logoutUser = async () => {
-  // 🔓 BYPASS TEMPORAL
-  return { success: true };
-};
+// ============================================
+// AUTENTICACIÓN
+// ============================================
 
-export const getCurrentUser = async () => {
-  // 🔓 BYPASS TEMPORAL
-  return {
-    email: 'demo@test.com',
-    name: 'Usuario Demo',
-    id: 'demo-123'
-  };
-};
-
-// ================================
-// EVALUACIONES
-// ================================
-export const getEvaluaciones = async () => {
-  // 🔓 BYPASS TEMPORAL - DATOS FAKE PARA DESARROLLO
-  return [
-    {
-      _id: '1',
-      companyName: 'Empresa Demo 1',
-      period: '2024-Q4',
-      finalScore: 85,
-      scores: { carbonScore: 80, waterScore: 85, wasteScore: 90 },
-      createdAt: new Date('2024-12-01'),
-    },
-    {
-      _id: '2',
-      companyName: 'Empresa Demo 2',
-      period: '2024-Q3',
-      finalScore: 65,
-      scores: { carbonScore: 60, waterScore: 70, wasteScore: 65 },
-      createdAt: new Date('2024-09-15'),
-    },
-    {
-      _id: '3',
-      companyName: 'Empresa Demo 3',
-      period: '2024-Q2',
-      finalScore: 45,
-      scores: { carbonScore: 40, waterScore: 50, wasteScore: 45 },
-      createdAt: new Date('2024-06-20'),
-    },
-  ];
-};
-
-export const getEvaluacionById = async (id) => {
-  // 🔓 BYPASS TEMPORAL - DATOS FAKE SIN LLAMAR AL BACKEND
-  const fakeData = [
-    {
-      _id: '1',
-      companyName: 'Empresa Demo 1',
-      period: '2024-Q4',
-      finalScore: 85,
-      scores: { carbonScore: 80, waterScore: 85, wasteScore: 90 },
-      createdAt: new Date('2024-12-01'),
-      alcance1: 18.5,
-      alcance2: 12.3,
-
-      // ⬇️⬇️⬇️ CAMPOS DE AGUA AGREGADOS ⬇️⬇️⬇️
-      consumoAgua: 15000,        // 15,000 litros/mes
-      aguaReutilizada: 2000,     // 2,000 litros reutilizados
-      intensidadHidrica: {
-        valor: 75,               // L por unidad o por persona
-        unidad: 'L/persona'      // o 'L/unidad producida'
-      },
-      // ⬆️⬆️⬆️ HASTA AQUÍ ⬆️⬆️⬆️
-
-      residuosGenerados: 3200,
-      residuosValorizados: 2400,
-      productosREP: [
-        {
-          producto: 'Envases y Embalajes',
-          anio: 2024,
-          cantidadGenerada: 1200,
-          cantidadValorizada: 950,
-        },
-        {
-          producto: 'Aparatos Eléctricos y Electrónicos (RAEE)',
-          anio: 2024,
-          cantidadGenerada: 450,
-          cantidadValorizada: 380,
-        },
-        {
-          producto: 'Neumáticos',
-          anio: 2024,
-          cantidadGenerada: 800,
-          cantidadValorizada: 720,
-        },
-      ],
-    },
-    {
-      _id: '2',
-      companyName: 'Empresa Demo 2',
-      period: '2024-Q3',
-      finalScore: 65,
-      scores: { carbonScore: 60, waterScore: 70, wasteScore: 65 },
-      createdAt: new Date('2024-09-15'),
-      alcance1: 22.8,
-      alcance2: 15.6,
-
-      // ⬇️⬇️⬇️ CAMPOS DE AGUA AGREGADOS ⬇️⬇️⬇️
-      consumoAgua: 22000,        // 22,000 litros/mes
-      aguaReutilizada: 1500,     // 1,500 litros reutilizados
-      intensidadHidrica: {
-        valor: 110,
-        unidad: 'L/persona'
-      },
-      // ⬆️⬆️⬆️ HASTA AQUÍ ⬆️⬆️⬆️
-
-      residuosGenerados: 2800,
-      residuosValorizados: 1400,
-      productosREP: [
-        {
-          producto: 'Aceites Lubricantes',
-          anio: 2024,
-          cantidadGenerada: 350,
-          cantidadValorizada: 180,
-        },
-        {
-          producto: 'Baterías',
-          anio: 2024,
-          cantidadGenerada: 120,
-          cantidadValorizada: 85,
-        },
-      ],
-    },
-    {
-      _id: '3',
-      companyName: 'Empresa Demo 3',
-      period: '2024-Q2',
-      finalScore: 45,
-      scores: { carbonScore: 40, waterScore: 50, wasteScore: 45 },
-      createdAt: new Date('2024-06-20'),
-      alcance1: 28.5,
-      alcance2: 10.2,
-
-      // ⬇️⬇️⬇️ CAMPOS DE AGUA AGREGADOS ⬇️⬇️⬇️
-      consumoAgua: 32000,        // 32,000 litros/mes (alto consumo)
-      aguaReutilizada: 800,      // Solo 800 litros reutilizados (baja eficiencia)
-      intensidadHidrica: {
-        valor: 160,              // Alto valor = baja eficiencia
-        unidad: 'L/persona'
-      },
-      // ⬆️⬆️⬆️ HASTA AQUÍ ⬆️⬆️⬆️
-
-      residuosGenerados: 4500,
-      residuosValorizados: 1350,
-      productosREP: [], // Sin productos REP
-    },
-  ];
-
-  // Simular delay de red
-  await new Promise(resolve => setTimeout(resolve, 300));
-
-  return fakeData.find(e => e._id === id) || fakeData[0];
-};
-
-export const createEvaluacion = async (data) => {
-  const response = await api.post('/evaluaciones', data);
-  return response.data;
-};
-
-export const updateEvaluacion = async (id, data) => {
-  const response = await api.put(`/evaluaciones/${id}`, data);
-  return response.data;
-};
-
-export const deleteEvaluacion = async (id) => {
-  const response = await api.delete(`/evaluaciones/${id}`);
-  return response.data;
-};
-
-// ================================
-// RESIDUOS REP
-// ================================
-export const getResiduosRep = async (empresaId) => {
-  const response = await api.get(`/residuos-rep/${empresaId}`);
-  return response.data;
-};
-
-export const createResiduoRep = async (data) => {
-  const response = await api.post('/residuos-rep', data);
-  return response.data;
-};
-
-export const updateResiduoRep = async (id, data) => {
-  const response = await api.put(`/residuos-rep/${id}`, data);
-  return response.data;
-};
-
-export const deleteResiduoRep = async (id) => {
-  const response = await api.delete(`/residuos-rep/${id}`);
-  return response.data;
-};
-
-export async function eliminarEvaluacion(id) {
-  // TODO: Descomentar cuando el backend esté disponible
-  /*
+export const registro = async (userData) => {
   try {
-    const response = await fetch(`${API_URL}/evaluaciones/${id}`, {
-      method: 'DELETE',
-    });
-    
-    if (!response.ok) {
-      throw new Error('Error al eliminar evaluación');
+    const response = await api.post('/auth/registro', userData);
+    if (response.data.success && response.data.data.token) {
+      localStorage.setItem('token', response.data.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.data.user));
     }
-    
-    return { success: true };
+    return response.data;
   } catch (error) {
-    console.error('Error eliminando evaluación:', error);
-    throw error;
+    throw error.response?.data || { message: 'Error al registrar usuario' };
   }
-  */
+};
 
-  // SIMULACIÓN: Solo retornar éxito sin llamar al backend
-  console.log('🎭 SIMULANDO eliminación de evaluación:', id);
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({ success: true });
-    }, 500);
-  });
-}
+export const login = async (credentials) => {
+  try {
+    const response = await api.post('/auth/login', credentials);
+    if (response.data.success && response.data.data.token) {
+      localStorage.setItem('token', response.data.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.data.user));
+    }
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Error al iniciar sesión' };
+  }
+};
+
+export const obtenerPerfil = async () => {
+  try {
+    const response = await api.get('/auth/me');
+    if (response.data.success) {
+      localStorage.setItem('user', JSON.stringify(response.data.data.user));
+    }
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Error al obtener perfil' };
+  }
+};
+
+export const logout = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.location.href = '/login';
+};
+
+// ============================================
+// DIAGNÓSTICOS
+// ============================================
+
+export const crearDiagnostico = async (diagnosticoData) => {
+  try {
+    const response = await api.post('/diagnosticos', diagnosticoData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Error al crear diagnóstico' };
+  }
+};
+
+export const obtenerDiagnosticos = async (params = {}) => {
+  try {
+    const response = await api.get('/diagnosticos', { params });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Error al obtener diagnósticos' };
+  }
+};
+
+export const obtenerDiagnosticoPorId = async (id) => {
+  try {
+    const response = await api.get(`/diagnosticos/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Error al obtener diagnóstico' };
+  }
+};
+
+export const actualizarDiagnostico = async (id, diagnosticoData) => {
+  try {
+    const response = await api.put(`/diagnosticos/${id}`, diagnosticoData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Error al actualizar diagnóstico' };
+  }
+};
+
+export const eliminarDiagnostico = async (id) => {
+  try {
+    const response = await api.delete(`/diagnosticos/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Error al eliminar diagnóstico' };
+  }
+};
+
+export const obtenerEstadisticas = async () => {
+  try {
+    const response = await api.get('/diagnosticos/estadisticas');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Error al obtener estadísticas' };
+  }
+};
+
+// ============================================
+// FUNCIONES AUXILIARES
+// ============================================
+
+export const isAuthenticated = () => {
+  return !!localStorage.getItem('token');
+};
+
+export const getUser = () => {
+  const user = localStorage.getItem('user');
+  return user ? JSON.parse(user) : null;
+};
+
+// ============================================
+// COMPATIBILIDAD CON NOMBRES ANTERIORES
+// ============================================
+
+export const getEvaluaciones = obtenerDiagnosticos;
+export const getEvaluacionById = obtenerDiagnosticoPorId;
+export const createEvaluacion = crearDiagnostico;
+export const updateEvaluacion = actualizarDiagnostico;
+export const deleteEvaluacion = eliminarDiagnostico;
+export const eliminarEvaluacion = eliminarDiagnostico;
+
+export const loginUser = login;
+export const logoutUser = logout;
+export const getCurrentUser = obtenerPerfil;
 
 export default api;

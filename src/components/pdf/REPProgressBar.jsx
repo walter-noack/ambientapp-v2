@@ -4,6 +4,7 @@ import { Target } from 'lucide-react';
 
 // Función para obtener meta simplificada (sin imports externos)
 function obtenerMeta(producto) {
+    if (!producto) return 50;
     const productoLower = producto.toLowerCase();
 
     // Metas para 2024 (primer año)
@@ -187,7 +188,7 @@ export default function REPProgressBar({ productosREP = [], anioEvaluacion = 202
                 {productosREP.map((producto, idx) => (
                     <ProductoREPBar
                         key={idx}
-                        producto={producto.producto}
+                        producto={producto.categoria || producto.producto || 'Producto sin nombre'}
                         anio={producto.anio || anioEvaluacion}
                         cantidadGenerada={producto.cantidadGenerada || 0}
                         cantidadValorizada={producto.cantidadValorizada || 0}
@@ -196,11 +197,13 @@ export default function REPProgressBar({ productosREP = [], anioEvaluacion = 202
             </div>
 
             {/* Leyenda */}
-            <div className="flex items-center gap-2 p-2 bg-red-50 border border-red-200 rounded-lg">
-                <div className="w-1 h-5 bg-red-600 rounded"></div>
-                <div className="flex items-center gap-1">
-                    <Target className="w-3 h-3 text-red-600" strokeWidth={2.5} />
-                    <span className="font-bold">Línea roja:</span>
+            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="w-1 h-6 bg-red-600 rounded flex-shrink-0"></div>
+                <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-red-600 flex-shrink-0" strokeWidth={2.5} />
+                    <span className="text-xs text-red-900">
+                        <span className="font-bold">Línea roja:</span> Representa la meta de valorización establecida por la Ley REP para cada producto prioritario en el año {anioEvaluacion}. El cumplimiento de esta meta es obligatorio y sujeto a fiscalización por la Superintendencia del Medio Ambiente.
+                    </span>
                 </div>
             </div>
         </div>

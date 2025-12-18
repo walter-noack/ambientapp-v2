@@ -40,6 +40,10 @@ export default function CarbonStackedChart({ alcance1, alcance2 }) {
     const porcentajeA1 = total > 0 ? ((alcance1 / total) * 100).toFixed(1) : 0;
     const porcentajeA2 = total > 0 ? ((alcance2 / total) * 100).toFixed(1) : 0;
 
+    // Convertir kg a toneladas
+    const alcance1Ton = alcance1 / 1000;
+    const alcance2Ton = alcance2 / 1000;
+
     // Crear gráfico
     chartRef.current = new ChartJS(ctx, {
       type: 'bar',
@@ -48,7 +52,7 @@ export default function CarbonStackedChart({ alcance1, alcance2 }) {
         datasets: [
           {
             label: 'Alcance 1 (Combustibles)',
-            data: [alcance1 || 0],
+            data: [alcance1Ton || 0],
             backgroundColor: 'rgba(16, 185, 129, 0.8)',
             borderColor: 'rgb(16, 185, 129)',
             borderWidth: 1,
@@ -56,7 +60,7 @@ export default function CarbonStackedChart({ alcance1, alcance2 }) {
           },
           {
             label: 'Alcance 2 (Electricidad)',
-            data: [alcance2 || 0],
+            data: [alcance2Ton || 0],
             backgroundColor: 'rgba(59, 130, 246, 0.8)',
             borderColor: 'rgb(59, 130, 246)',
             borderWidth: 1,
@@ -78,8 +82,11 @@ export default function CarbonStackedChart({ alcance1, alcance2 }) {
                 family: 'Inter, sans-serif'
               },
               color: '#64748b',
-              callback: function(value) {
-                return value + ' kg';
+              callback: function (value) {
+                return value.toLocaleString('es-CL', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                }) + ' tCO₂e';
               }
             },
             grid: {
@@ -129,10 +136,10 @@ export default function CarbonStackedChart({ alcance1, alcance2 }) {
             padding: 10,
             cornerRadius: 6,
             callbacks: {
-              label: function(context) {
+              label: function (context) {
                 const value = context.parsed.x;
                 const percentage = context.datasetIndex === 0 ? porcentajeA1 : porcentajeA2;
-                return `${context.dataset.label}: ${value} kg (${percentage}%)`;
+                return `${context.dataset.label}: ${value.toFixed(2)} tCO₂e (${percentage}%)`;
               }
             }
           },
@@ -141,13 +148,13 @@ export default function CarbonStackedChart({ alcance1, alcance2 }) {
             color: '#ffffff',
             font: {
               weight: 'bold',
-              size: 13,
+              size: 11,
               family: 'Inter, sans-serif'
             },
-            formatter: function(value, context) {
+            formatter: function (value, context) {
               if (value === 0) return '';
               const percentage = context.datasetIndex === 0 ? porcentajeA1 : porcentajeA2;
-              return `${value} kg`;
+              return `${value.toFixed(2)} ton`;
             },
             anchor: 'center',
             align: 'center',
@@ -167,8 +174,8 @@ export default function CarbonStackedChart({ alcance1, alcance2 }) {
   }, [alcance1, alcance2]);
 
   return (
-    <div style={{ 
-      width: '100%', 
+    <div style={{
+      width: '100%',
       height: '200px',
       display: 'flex',
       alignItems: 'center',

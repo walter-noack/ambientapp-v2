@@ -31,6 +31,25 @@ import {
 import { QuickWinsAsImage } from './ImageRenderedComponents';
 import { ProximosPasosWithImages } from './ImageRenderedComponents';
 
+// AGREGAR ESTAS FUNCIONES JUSTO DESPUÉS DE LOS IMPORTS:
+
+const formatNumber = (num, decimales = 0) => {
+    if (num === null || num === undefined || isNaN(num)) return '0';
+    return num.toLocaleString('es-CL', {
+        minimumFractionDigits: decimales,
+        maximumFractionDigits: decimales
+    });
+};
+
+const kgAToneladas = (kg) => {
+    if (!kg || kg === 0) return '0,00';
+    return formatNumber(kg / 1000, 2);
+};
+
+const formatPorcentaje = (num) => {
+    if (num === null || num === undefined || isNaN(num)) return '0,0';
+    return formatNumber(num, 1);
+};
 
 function LogoAmbientAPP() {
     const [png, setPng] = useState(null);
@@ -92,6 +111,55 @@ export default function InformePDF({
     const empresa = ev.companyName || "Empresa no definida";
     const periodo = ev.period || "Período no definido";
     const fecha = new Date().toLocaleDateString("es-CL");
+    // Variables de emisiones con formato correcto
+    const totalEmisionesTon = kgAToneladas(emisiones?.totalKg || 0);
+    const alcance1Ton = kgAToneladas(emisiones?.alcance1 || 0);
+    const alcance2Ton = kgAToneladas(emisiones?.alcance2 || 0);
+    const alcance1Kg = emisiones?.alcance1 || 0;
+    const alcance2Kg = emisiones?.alcance2 || 0;
+    const totalKg = emisiones?.totalKg || 0;
+
+    // Porcentajes de alcances
+    const porcentajeA1 = totalKg > 0 ? ((alcance1Kg / totalKg) * 100) : 0;
+    const porcentajeA2 = totalKg > 0 ? ((alcance2Kg / totalKg) * 100) : 0;
+
+    // Datos de combustibles individuales (del backend)
+    const diesel = ev?.carbono?.diesel || 0;
+    const bencina = ev?.carbono?.bencina || 0;
+    const gasNatural = ev?.carbono?.gasNatural || 0;
+    const otrosCombustibles = ev?.carbono?.otrosCombustibles || 0;
+    const electricidad = ev?.carbono?.electricidad || 0;
+
+    // Calcular emisiones por combustible (factores chilenos)
+    const emisionesDiesel = diesel * 2.68;
+    const emisionesBencina = bencina * 2.31;
+    const emisionesGasNatural = gasNatural * 1.98;
+    const emisionesOtros = otrosCombustibles * 2.5;
+    const emisionesElectricidad = electricidad * 0.413;
+
+    // Agua
+    const consumoAgua = ev?.agua?.consumoTotal || 0;
+    const consumoAguaMes = consumoAgua;
+    const intensidadHidrica = ev?.agua?.consumoPerCapita || null;
+    const tipoMedicion = ev?.agua?.tipoMedicion || 'persona';
+
+    // Residuos
+    const residuosTotales = ev?.residuos?.generados || 0;
+    const residuosReciclados = ev?.residuos?.valorizados || 0;
+    const tasaValorizacion = residuosTotales > 0 ? ((residuosReciclados / residuosTotales) * 100) : 0;
+    const residuosNoValorizados = residuosTotales - residuosReciclados;
+    const potencialMejora = 100 - tasaValorizacion;
+
+    // Scores
+    const carbonScore = ev?.carbono?.puntuacion || 0;
+    const waterScore = ev?.agua?.puntuacion || 0;
+    const wasteScore = ev?.residuos?.puntuacion || 0;
+    const puntajeGlobal = ev?.puntuacionGeneral || 0;
+
+    // REP
+    const productosREP = ev?.productosREP || [];
+    const anioEvaluacion = ev?.anio || 2024;
+
 
     usePdfPageNumbers({ empresa, fecha });
 
@@ -455,28 +523,28 @@ export default function InformePDF({
                     <CardKPI
                         title="Huella de carbono"
                         color="emerald"
-                        value={`${emisiones.totalTon.toFixed(2)} tCO₂e`}
+                        value={`${totalEmisionesTon} tCO₂e`}
                         desc="Emisiones totales considerando combustibles (A1) y electricidad (A2)."
                     />
 
                     <CardKPI
                         title="Consumo de agua"
                         color="sky"
-                        value={`${ev?.waterData?.consumoMensual?.toLocaleString("es-CL") ?? "–"} L/mes`}
+                        value={`${formatNumber(consumoAguaMes, 0)} L/mes`}
                         desc="Consumo mensual promedio declarado."
                     />
 
                     <CardKPI
                         title="Residuos generados"
                         color="lime"
-                        value={`${totalResiduos.toLocaleString("es-CL")} kg/año`}
+                        value={`${formatNumber(residuosTotales, 0)} kg/año`}
                         desc="Total de residuos sólidos declarados."
                     />
 
                     <CardKPI
                         title="Valorización REP"
                         color="blue"
-                        value={repUltimo ? `${repPct.toFixed(1)}%` : "–"}
+                        value={`${formatPorcentaje(tasaValorizacion)}%`}
                         desc="Porcentaje valorizado según último registro."
                     />
                 </div>
@@ -814,18 +882,10 @@ export default function InformePDF({
                             const alcance1Kg = emisiones?.alcance1 || 0;
                             const alcance2Kg = emisiones?.alcance2 || 0;
 
-                            // Función helper para formatear según magnitud
-                            const formatEmision = (kg) => {
-                                if (kg < 1000) {
-                                    return { valor: kg.toFixed(1), unidad: 'kgCO₂e' };
-                                } else {
-                                    return { valor: (kg / 1000).toFixed(2), unidad: 'tCO₂e' };
-                                }
-                            };
-
-                            const total = formatEmision(totalKg);
-                            const a1 = formatEmision(alcance1Kg);
-                            const a2 = formatEmision(alcance2Kg);
+                            // Siempre mostrar en toneladas con formato chileno
+                            const total = { valor: totalEmisionesTon, unidad: 'tCO₂e' };
+                            const a1 = { valor: alcance1Ton, unidad: 'tCO₂e' };
+                            const a2 = { valor: alcance2Ton, unidad: 'tCO₂e' };
 
                             return (
                                 <div className="grid grid-cols-3 gap-3">
@@ -847,7 +907,7 @@ export default function InformePDF({
                                             {a1.valor}
                                         </p>
                                         <p className="text-[10px] text-emerald-600">
-                                            {a1.unidad} ({((alcance1Kg / totalKg) * 100).toFixed(1)}%)
+                                            {a1.unidad} ({formatPorcentaje(porcentajeA1)}%)
                                         </p>
                                     </div>
 
@@ -859,7 +919,7 @@ export default function InformePDF({
                                             {a2.valor}
                                         </p>
                                         <p className="text-[10px] text-blue-600">
-                                            {a2.unidad} ({((alcance2Kg / totalKg) * 100).toFixed(1)}%)
+                                            {a2.unidad} ({formatPorcentaje(porcentajeA2)}%)
                                         </p>
                                     </div>
                                 </div>
@@ -884,56 +944,86 @@ export default function InformePDF({
                         <>
                             {/* DESGLOSE POR FUENTE */}
                             <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-300">
-                                <h4 className="text-xs font-bold text-slate-800 mb-3">Desglose por fuente de emisión</h4>
+                                <h4 className="text-xs font-bold text-slate-800 mb-3">
+                                    Desglose por fuente de emisión
+                                </h4>
+
                                 <div className="grid grid-cols-2 gap-3">
-                                    {/* Alcance 1 - Desglose REAL */}
-                                    <div className="p-3 bg-white rounded border border-red-200">
-                                        <p className="text-[10px] font-bold text-red-800 mb-2">Alcance 1 - Emisiones directas</p>
+                                    {/* Alcance 1 - Izquierda, mismo formato que Alcance 2 */}
+                                    <div className="p-3 bg-white rounded border border-slate-200">
+                                        <p className="text-[10px] font-bold text-slate-800 mb-2">
+                                            Alcance 1 - Emisiones directas
+                                        </p>
                                         <ul className="space-y-1 text-[9px] text-slate-600">
-                                            {emisiones?.detalle?.diesel > 0 && (
+                                            {diesel > 0 && (
                                                 <li className="flex justify-between">
                                                     <span>• Diesel:</span>
-                                                    <span className="font-semibold">{emisiones.detalle.diesel.toFixed(1)} kg</span>
+                                                    <span className="font-semibold">
+                                                        {formatNumber(emisionesDiesel, 0)} kg
+                                                    </span>
                                                 </li>
                                             )}
-                                            {emisiones?.detalle?.bencina > 0 && (
+                                            {bencina > 0 && (
                                                 <li className="flex justify-between">
                                                     <span>• Gasolina:</span>
-                                                    <span className="font-semibold">{emisiones.detalle.bencina.toFixed(1)} kg</span>
+                                                    <span className="font-semibold">
+                                                        {formatNumber(emisionesBencina, 0)} kg
+                                                    </span>
                                                 </li>
                                             )}
-                                            {emisiones?.detalle?.gasNatural > 0 && (
+                                            {gasNatural > 0 && (
                                                 <li className="flex justify-between">
                                                     <span>• Gas natural:</span>
-                                                    <span className="font-semibold">{emisiones.detalle.gasNatural.toFixed(1)} kg</span>
+                                                    <span className="font-semibold">
+                                                        {formatNumber(emisionesGasNatural, 0)} kg
+                                                    </span>
+                                                </li>
+                                            )}
+                                            {otrosCombustibles > 0 && (
+                                                <li className="flex justify-between">
+                                                    <span>• Otros combustibles:</span>
+                                                    <span className="font-semibold">
+                                                        {formatNumber(emisionesOtros, 0)} kg
+                                                    </span>
                                                 </li>
                                             )}
 
-                                            {/* Si no hay ningún combustible, mostrar mensaje */}
-                                            {!emisiones?.detalle?.diesel &&
-                                                !emisiones?.detalle?.bencina &&
-                                                !emisiones?.detalle?.gasNatural && (
-                                                    <li className="text-slate-400 italic">Sin desglose de combustibles</li>
+                                            {/* Si no hay ningún combustible */}
+                                            {diesel === 0 &&
+                                                bencina === 0 &&
+                                                gasNatural === 0 &&
+                                                otrosCombustibles === 0 && (
+                                                    <li className="text-slate-400 italic">
+                                                        Sin desglose de combustibles
+                                                    </li>
                                                 )}
 
                                             <li className="flex justify-between border-t border-slate-200 pt-1 mt-1">
                                                 <span className="font-bold">Total Alcance 1:</span>
-                                                <span className="font-bold text-red-700">{alcance1.toFixed(1)} kg</span>
+                                                <span className="font-bold text-red-700">
+                                                    {formatNumber(alcance1Kg, 0)} kg
+                                                </span>
                                             </li>
                                         </ul>
                                     </div>
 
-                                    {/* Alcance 2 - Electricidad */}
+                                    {/* Alcance 2 - Derecha (igual que antes) */}
                                     <div className="p-3 bg-white rounded border border-orange-200">
-                                        <p className="text-[10px] font-bold text-orange-800 mb-2">Alcance 2 - Emisiones indirectas</p>
+                                        <p className="text-[10px] font-bold text-orange-800 mb-2">
+                                            Alcance 2 - Emisiones indirectas
+                                        </p>
                                         <ul className="space-y-1 text-[9px] text-slate-600">
                                             <li className="flex justify-between">
                                                 <span>• Electricidad comprada:</span>
-                                                <span className="font-semibold">{(emisiones?.detalle?.electricidad || 0).toFixed(1)} kg</span>
+                                                <span className="font-semibold">
+                                                    {formatNumber(emisionesElectricidad, 0)} kg
+                                                </span>
                                             </li>
                                             <li className="flex justify-between border-t border-slate-200 pt-1 mt-1">
                                                 <span className="font-bold">Total Alcance 2:</span>
-                                                <span className="font-bold text-orange-700">{alcance2.toFixed(1)} kg</span>
+                                                <span className="font-bold text-orange-700">
+                                                    {formatNumber(alcance2Kg, 0)} kg
+                                                </span>
                                             </li>
                                         </ul>
                                     </div>
@@ -954,10 +1044,10 @@ export default function InformePDF({
                                     </p>
                                     <div className="bg-white p-3 rounded border border-blue-200">
                                         <p className="text-[9px] text-slate-600 mb-1">Huella actual:</p>
-                                        <p className="text-lg font-bold text-slate-800">{valorMostrar.toFixed(1)} {unidad}</p>
+                                        <p className="text-lg font-bold text-slate-800">{formatNumber(valorMostrar, 2)}</p>
                                         <p className="text-[9px] text-slate-600 mt-2 mb-1">Meta 2030 (reducción 4.2%/año):</p>
                                         <p className="text-lg font-bold text-blue-700">
-                                            {(valorMostrar * Math.pow(0.958, 6)).toFixed(1)} {unidad}
+                                            {formatNumber(valorMostrar * Math.pow(0.958, 6), 2)} {unidad}
                                         </p>
                                         <p className="text-[8px] text-green-600 mt-1">
                                             ↓ {((1 - Math.pow(0.958, 6)) * 100).toFixed(0)}% reducción total
@@ -997,7 +1087,7 @@ export default function InformePDF({
                                         <div className="mt-3 pt-2 border-t border-green-200">
                                             <p className="text-[9px] text-slate-600">Huella proyectada 2026:</p>
                                             <p className="text-lg font-bold text-green-700">
-                                                {(valorMostrar * 0.7).toFixed(1)} {unidad}
+                                                {formatNumber(valorMostrar * 0.7, 2)} {unidad}
                                             </p>
                                         </div>
                                     </div>
@@ -1035,7 +1125,7 @@ export default function InformePDF({
                         <CardKPI
                             title="Consumo mensual"
                             color="sky"
-                            value={`${(ev?.waterData?.consumoMensual || 0).toLocaleString('es-CL')} L`}
+                            value={`${formatNumber(consumoAguaMes, 0)} L`}
                             desc="Volumen total de agua consumida en el período evaluado"
                         />
 
@@ -1043,8 +1133,8 @@ export default function InformePDF({
                             title="Intensidad hídrica"
                             color="blue"
                             value={
-                                ev?.intensidadHidrica?.valor
-                                    ? `${ev.intensidadHidrica.valor.toFixed(2)} ${ev.intensidadHidrica.unidad}`
+                                intensidadHidrica
+                                    ? `${formatNumber(intensidadHidrica, 0)} L/${tipoMedicion === 'persona' ? 'persona' : 'unidad'}`
                                     : "No calculada"
                             }
                             desc="Consumo de agua normalizado según unidad productiva o personas"
@@ -1173,21 +1263,21 @@ export default function InformePDF({
                     <CardKPI
                         title="Residuos totales"
                         color="lime"
-                        value={`${(totalResiduos || 0).toLocaleString('es-CL')} kg`}
+                        value={`${formatNumber(residuosTotales, 0)} kg`}
                         desc="Cantidad total generada en el período"
                     />
 
                     <CardKPI
                         title="Residuos reciclados"
                         color="emerald"
-                        value={`${(ev?.wasteData?.residuosReciclados || 0).toLocaleString('es-CL')} kg`}
+                        value={`${formatNumber(residuosReciclados, 0)} kg`}
                         desc="Cantidad valorizada mediante reciclaje"
                     />
 
                     <CardKPI
                         title="Tasa de valorización"
                         color="green"
-                        value={`${calcularPorcentajeReciclaje(ev?.wasteData)}%`}
+                        value={`${formatPorcentaje(tasaValorizacion)}%`}
                         desc="Porcentaje valorizado sobre el total"
                     />
                 </div>
@@ -1204,7 +1294,7 @@ export default function InformePDF({
                         <div className="text-center p-3 bg-slate-50 rounded">
                             <p className="text-xs text-slate-600 mb-1">Residuos no valorizados</p>
                             <p className="text-2xl font-bold text-red-600">
-                                {((totalResiduos || 0) - (ev?.wasteData?.residuosReciclados || 0)).toLocaleString('es-CL')} kg
+                                {formatNumber(residuosNoValorizados, 0)} kg
                             </p>
                             <p className="text-[10px] text-slate-500">Enviados a disposición final</p>
                         </div>
@@ -1212,7 +1302,7 @@ export default function InformePDF({
                         <div className="text-center p-3 bg-green-50 rounded">
                             <p className="text-xs text-slate-600 mb-1">Potencial de mejora</p>
                             <p className="text-2xl font-bold text-green-600">
-                                {(100 - parseFloat(calcularPorcentajeReciclaje(ev?.wasteData))).toFixed(0)}%
+                                {formatPorcentaje(potencialMejora)}%
                             </p>
                             <p className="text-[10px] text-slate-500">Margen para incrementar valorización</p>
                         </div>
@@ -1369,7 +1459,7 @@ export default function InformePDF({
                                                     return (
                                                         <tr key={idx} className="hover:bg-slate-50">
                                                             <td className="px-3 py-1.5 text-[10px] text-slate-800">
-                                                                {producto.producto}
+                                                                {producto.categoria || producto.producto || 'Sin categoría'}
                                                             </td>
                                                             <td className="px-3 py-1.5 text-center text-[10px] text-slate-600">
                                                                 {producto.anio || anio}
@@ -1485,6 +1575,9 @@ export default function InformePDF({
             {/*         PÁGINA 8 - ANÁLISIS ESTRATÉGICO                  */}
             {/* ========================================================= */}
             {(() => {
+
+                const consumoAguaMes = ev?.agua?.consumoTotal || 0;
+                const waterScore = ev?.agua?.puntuacion || 0;
                 // Importar funciones de análisis
                 const fortalezas = identificarFortalezas(ev);
                 const oportunidades = identificarOportunidades(ev);
@@ -1729,8 +1822,10 @@ export default function InformePDF({
             {(() => {
                 // Generar recomendaciones priorizadas
                 const recomendaciones = generarRecomendacionesPriorizadas(ev);
+
                 const altaPrioridad = recomendaciones.filter(r => r.prioridad === 'Alta');
                 const mediaPrioridad = recomendaciones.filter(r => r.prioridad === 'Media');
+
 
                 // Dividir: máximo 2 recomendaciones por página
                 const recsPage1 = altaPrioridad.slice(0, 2);
@@ -1762,43 +1857,9 @@ export default function InformePDF({
                                 page={9}
                             />
 
-                            {/* MATRIZ DE PRIORIZACIÓN */}
-                            <div className="mb-4 flex-shrink-0">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                                        <Target className="w-4 h-4 text-white" strokeWidth={2.5} />
-                                    </div>
-                                    <h3 className="text-sm font-bold text-slate-800">
-                                        Criterios de priorización
-                                    </h3>
-                                </div>
-
-                                <div className="grid grid-cols-[1fr_1.2fr] gap-4">
-                                    {/* Explicación */}
-                                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                                        <p className="text-xs text-slate-700 mb-2 leading-relaxed">
-                                            Las recomendaciones han sido priorizadas según dos criterios principales:
-                                        </p>
-                                        <ul className="space-y-1.5">
-                                            <li className="flex items-start gap-2 text-[10px] text-slate-600">
-                                                <div className="w-1 h-1 bg-blue-600 rounded-full mt-1.5 flex-shrink-0"></div>
-                                                <span><strong>Impacto:</strong> Potencial de mejora en desempeño ambiental</span>
-                                            </li>
-                                            <li className="flex items-start gap-2 text-[10px] text-slate-600">
-                                                <div className="w-1 h-1 bg-blue-600 rounded-full mt-1.5 flex-shrink-0"></div>
-                                                <span><strong>Esfuerzo:</strong> Recursos y tiempo requeridos</span>
-                                            </li>
-                                        </ul>
-                                    </div>
-
-                                    {/* Matriz */}
-                                    <MatrizPriorizacionImagen recomendaciones={recomendaciones} />
-                                </div>
-                            </div>
-
                             {/* RECOMENDACIONES ALTA PRIORIDAD - PRIMERAS 2 */}
                             {recsPage1.length > 0 && (
-                                <div className="flex-1 overflow-hidden">
+                                <div className="mt-6">
                                     <div className="flex items-center gap-2 mb-3">
                                         <div className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center">
                                             <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
@@ -1837,98 +1898,102 @@ export default function InformePDF({
                                     </p>
                                 </div>
                             </div>
-                        </section>
+                        </section >
 
                         {/* ========== PÁGINA 9B - CONTINUACIÓN (Solo si hay más recomendaciones) ========== */}
-                        {necesitaSegundaPagina && (
-                            <section
-                                className="pdf-page"
-                                style={{
-                                    minHeight: "1120px",
-                                    maxHeight: "1120px",
-                                    padding: "40px 60px",
-                                    paddingBottom: "80px",
-                                    position: "relative",
-                                    overflow: "hidden",
-                                    display: "flex",
-                                    flexDirection: "column"
-                                }}
-                            >
-                                <HeaderSection
-                                    title="Plan de acción priorizado (continuación)"
-                                    desc="Recomendaciones adicionales para implementación escalonada."
-                                    page="9B"
-                                />
+                        {
+                            necesitaSegundaPagina && (
+                                <section
+                                    className="pdf-page"
+                                    style={{
+                                        minHeight: "1120px",
+                                        maxHeight: "1120px",
+                                        padding: "40px 60px",
+                                        paddingBottom: "80px",
+                                        position: "relative",
+                                        overflow: "hidden",
+                                        display: "flex",
+                                        flexDirection: "column"
+                                    }}
+                                >
+                                    <HeaderSection
+                                        title="Plan de acción priorizado (continuación)"
+                                        desc="Recomendaciones adicionales para implementación escalonada."
+                                        page="9B"
+                                    />
 
-                                {/* ALTA PRIORIDAD RESTANTES (si hay) */}
-                                {altaPrioridad.slice(2).length > 0 && (
-                                    <div className="mb-4 flex-shrink-0">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <div className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center">
-                                                <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
-                                            </div>
-                                            <h3 className="text-sm font-bold text-slate-800">
-                                                Alta prioridad (continuación)
-                                            </h3>
-                                            <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[9px] font-bold rounded">
-                                                0-6 meses
-                                            </span>
-                                            <span className="ml-auto text-[9px] text-slate-500">(2/2)</span>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            {altaPrioridad.slice(2).map((rec, idx) => (
-                                                <RecomendacionMejorada
-                                                    key={rec.id}
-                                                    rec={rec}
-                                                    numero={recsPage1.length + idx + 1}
+                                    {/* ALTA PRIORIDAD RESTANTES (si hay) */}
+                                    {altaPrioridad.slice(2).length > 0 && (
+                                        <div className="mb-4 flex-shrink-0">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <div className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center">
+                                                    <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
+                                                </div>
+                                                <h3 className="text-sm font-bold text-slate-800">
+                                                    Alta prioridad (continuación)
+                                                </h3>
+                                                <BadgePlazoSVG
+                                                    texto="Implementar en 0-6 meses"
+                                                    bgColor="#fee2e2"
+                                                    textColor="#991b1b"
                                                 />
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* RECOMENDACIONES MEDIA PRIORIDAD */}
-                                {mediaPrioridad.length > 0 && (
-                                    <div className="flex-1 overflow-hidden">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <div className="w-6 h-6 bg-yellow-600 rounded-full flex items-center justify-center">
-                                                <Clock className="w-4 h-4 text-white" strokeWidth={2.5} />
+                                                <span className="ml-auto text-[9px] text-slate-500">(2/2)</span>
                                             </div>
-                                            <h3 className="text-sm font-bold text-slate-800">
-                                                Recomendaciones de media prioridad
-                                            </h3>
-                                            <BadgePlazoSVG
-                                                texto="6-18 meses"
-                                                bgColor="#fef3c7"
-                                                textColor="#78350f"
-                                            />
-                                        </div>
 
-                                        <div className="space-y-3">
-                                            {mediaPrioridad.slice(0, 2).map((rec, idx) => (
-                                                <RecomendacionMejorada
-                                                    key={rec.id}
-                                                    rec={rec}
-                                                    numero={altaPrioridad.length + idx + 1}
+                                            <div className="space-y-3">
+                                                {altaPrioridad.slice(2).map((rec, idx) => (
+                                                    <RecomendacionMejorada
+                                                        key={rec.id}
+                                                        rec={rec}
+                                                        numero={recsPage1.length + idx + 1}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* RECOMENDACIONES MEDIA PRIORIDAD */}
+                                    {mediaPrioridad.length > 0 && (
+                                        <div className="flex-1 overflow-hidden">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <div className="w-6 h-6 bg-yellow-600 rounded-full flex items-center justify-center">
+                                                    <Clock className="w-4 h-4 text-white" strokeWidth={2.5} />
+                                                </div>
+                                                <h3 className="text-sm font-bold text-slate-800">
+                                                    Recomendaciones de media prioridad
+                                                </h3>
+                                                <BadgePlazoSVG
+                                                    texto="6-18 meses"
+                                                    bgColor="#fef3c7"
+                                                    textColor="#78350f"
                                                 />
-                                            ))}
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                {mediaPrioridad.slice(0, 2).map((rec, idx) => (
+                                                    <RecomendacionMejorada
+                                                        key={rec.id}
+                                                        rec={rec}
+                                                        numero={altaPrioridad.length + idx + 1}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Nota metodológica */}
+                                    <div className="mt-auto pt-3 border-t border-slate-200 flex-shrink-0">
+                                        <div className="flex items-start gap-2">
+                                            <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                                            <p className="text-[9px] text-slate-500 italic">
+                                                Los presupuestos y plazos son estimaciones referenciales que deben ajustarse según
+                                                la realidad específica de su organización.
+                                            </p>
                                         </div>
                                     </div>
-                                )}
-
-                                {/* Nota metodológica */}
-                                <div className="mt-auto pt-3 border-t border-slate-200 flex-shrink-0">
-                                    <div className="flex items-start gap-2">
-                                        <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                                        <p className="text-[9px] text-slate-500 italic">
-                                            Los presupuestos y plazos son estimaciones referenciales que deben ajustarse según
-                                            la realidad específica de su organización.
-                                        </p>
-                                    </div>
-                                </div>
-                            </section>
-                        )}
+                                </section>
+                            )
+                        }
                     </>
                 );
             })()}
@@ -1936,261 +2001,256 @@ export default function InformePDF({
             {/* ========================================================= */}
             {/*         PÁGINA 10 - ROADMAP Y SEGUIMIENTO                */}
             {/* ========================================================= */}
-            {(() => {
-                // Generar datos
-                const recomendaciones = generarRecomendacionesPriorizadas(ev);
-                const roadmap = generarRoadmap(recomendaciones);
-                const quickWins = identificarQuickWins(recomendaciones);
+            {
+                (() => {
+                    // Generar datos
+                    const recomendaciones = generarRecomendacionesPriorizadas(ev);
+                    const roadmap = generarRoadmap(recomendaciones);
+                    const quickWins = identificarQuickWins(recomendaciones);
 
-                return (
-                    <section
-                        className="pdf-page"
-                        style={{
-                            minHeight: "1120px",
-                            maxHeight: "1120px",
-                            padding: "40px 60px",
-                            paddingBottom: "80px",
-                            position: "relative",
-                            overflow: "hidden",
-                            display: "flex",
-                            flexDirection: "column"
-                        }}
-                    >
-                        <HeaderSection
-                            title="Hoja de ruta y seguimiento"
-                            desc="Cronograma de implementación, acciones rápidas y KPIs de seguimiento."
-                            page={10}
-                        />
+                    return (
+                        <section
+                            className="pdf-page"
+                            style={{
+                                minHeight: "1120px",
+                                maxHeight: "1120px",
+                                padding: "40px 60px",
+                                paddingBottom: "80px",
+                                position: "relative",
+                                overflow: "hidden",
+                                display: "flex",
+                                flexDirection: "column"
+                            }}
+                        >
+                            <HeaderSection
+                                title="Hoja de ruta y seguimiento"
+                                desc="Cronograma de implementación, acciones rápidas y KPIs de seguimiento."
+                                page={10}
+                            />
 
-                        {/* SECCIÓN 1: QUICK WINS */}
-                        {quickWins.length > 0 && (
+                            {/* SECCIÓN 1: QUICK WINS */}
+                            {quickWins.length > 0 && (
+                                <div className="mb-4 flex-shrink-0">
+
+                                    <QuickWinsSection quickWins={quickWins} />
+                                </div>
+                            )}
+
+                            {/* SECCIÓN 2: ROADMAP TRIMESTRAL */}
                             <div className="mb-4 flex-shrink-0">
                                 <div className="flex items-center gap-2 mb-3">
-                                    <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center">
-                                        <Rocket className="w-4 h-4 text-white" strokeWidth={2.5} />
+                                    <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                                        <Calendar className="w-4 h-4 text-white" strokeWidth={2.5} />
                                     </div>
                                     <h3 className="text-sm font-bold text-slate-800">
-                                        Quick Wins (0-3 meses)
+                                        Roadmap de implementación 2025
                                     </h3>
                                 </div>
-                                <QuickWinsSection quickWins={quickWins} />
-                            </div>
-                        )}
 
-                        {/* SECCIÓN 2: ROADMAP TRIMESTRAL */}
-                        <div className="mb-4 flex-shrink-0">
-                            <div className="flex items-center gap-2 mb-3">
-                                <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                                    <Calendar className="w-4 h-4 text-white" strokeWidth={2.5} />
+                                <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl">
+                                    <RoadmapTimeline roadmap={roadmap} />
                                 </div>
-                                <h3 className="text-sm font-bold text-slate-800">
-                                    Roadmap de implementación 2025
-                                </h3>
                             </div>
 
-                            <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl">
-                                <RoadmapTimeline roadmap={roadmap} />
-                            </div>
-                        </div>
-
-                        {/* SECCIÓN 3: KPIs DE SEGUIMIENTO */}
-                        <div className="mb-4 flex-shrink-0">
-                            <div className="flex items-center gap-2 mb-3">
-                                <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
-                                    <BarChart3 className="w-4 h-4 text-white" strokeWidth={2.5} />
+                            {/* SECCIÓN 3: KPIs DE SEGUIMIENTO */}
+                            <div className="mb-4 flex-shrink-0">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
+                                        <BarChart3 className="w-4 h-4 text-white" strokeWidth={2.5} />
+                                    </div>
+                                    <h3 className="text-sm font-bold text-slate-800">
+                                        KPIs de seguimiento recomendados
+                                    </h3>
                                 </div>
-                                <h3 className="text-sm font-bold text-slate-800">
-                                    KPIs de seguimiento recomendados
-                                </h3>
-                            </div>
 
-                            <div className="grid grid-cols-3 gap-3">
-                                {/* KPI 1: Carbono */}
-                                <div className="p-3 bg-white border-2 border-slate-200 rounded-lg">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
-                                            <Leaf className="w-5 h-5 text-emerald-600" />
+                                <div className="grid grid-cols-3 gap-3">
+                                    {/* KPI 1: Carbono */}
+                                    <div className="p-3 bg-white border-2 border-slate-200 rounded-lg">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                                                <Leaf className="w-5 h-5 text-emerald-600" />
+                                            </div>
+                                            <h4 className="text-xs font-bold text-slate-800">Carbono</h4>
                                         </div>
-                                        <h4 className="text-xs font-bold text-slate-800">Carbono</h4>
+                                        <ul className="space-y-1">
+                                            <li className="text-[9px] text-slate-600 flex items-start gap-1">
+                                                <span className="text-emerald-600">•</span>
+                                                <span>tCO₂e mensuales</span>
+                                            </li>
+                                            <li className="text-[9px] text-slate-600 flex items-start gap-1">
+                                                <span className="text-emerald-600">•</span>
+                                                <span>kWh consumidos</span>
+                                            </li>
+                                            <li className="text-[9px] text-slate-600 flex items-start gap-1">
+                                                <span className="text-emerald-600">•</span>
+                                                <span>L combustible/mes</span>
+                                            </li>
+                                        </ul>
                                     </div>
-                                    <ul className="space-y-1">
-                                        <li className="text-[9px] text-slate-600 flex items-start gap-1">
-                                            <span className="text-emerald-600">•</span>
-                                            <span>tCO₂e mensuales</span>
-                                        </li>
-                                        <li className="text-[9px] text-slate-600 flex items-start gap-1">
-                                            <span className="text-emerald-600">•</span>
-                                            <span>kWh consumidos</span>
-                                        </li>
-                                        <li className="text-[9px] text-slate-600 flex items-start gap-1">
-                                            <span className="text-emerald-600">•</span>
-                                            <span>L combustible/mes</span>
-                                        </li>
-                                    </ul>
-                                </div>
 
-                                {/* KPI 2: Residuos */}
-                                <div className="p-3 bg-white border-2 border-slate-200 rounded-lg">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
-                                            <Recycle className="w-5 h-5 text-amber-600" />
+                                    {/* KPI 2: Residuos */}
+                                    <div className="p-3 bg-white border-2 border-slate-200 rounded-lg">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                                                <Recycle className="w-5 h-5 text-amber-600" />
+                                            </div>
+                                            <h4 className="text-xs font-bold text-slate-800">Residuos</h4>
                                         </div>
-                                        <h4 className="text-xs font-bold text-slate-800">Residuos</h4>
+                                        <ul className="space-y-1">
+                                            <li className="text-[9px] text-slate-600 flex items-start gap-1">
+                                                <span className="text-amber-600">•</span>
+                                                <span>% Valorización</span>
+                                            </li>
+                                            <li className="text-[9px] text-slate-600 flex items-start gap-1">
+                                                <span className="text-amber-600">•</span>
+                                                <span>kg reciclados/mes</span>
+                                            </li>
+                                            <li className="text-[9px] text-slate-600 flex items-start gap-1">
+                                                <span className="text-amber-600">•</span>
+                                                <span>Cumplimiento REP</span>
+                                            </li>
+                                        </ul>
                                     </div>
-                                    <ul className="space-y-1">
-                                        <li className="text-[9px] text-slate-600 flex items-start gap-1">
-                                            <span className="text-amber-600">•</span>
-                                            <span>% Valorización</span>
-                                        </li>
-                                        <li className="text-[9px] text-slate-600 flex items-start gap-1">
-                                            <span className="text-amber-600">•</span>
-                                            <span>kg reciclados/mes</span>
-                                        </li>
-                                        <li className="text-[9px] text-slate-600 flex items-start gap-1">
-                                            <span className="text-amber-600">•</span>
-                                            <span>Cumplimiento REP</span>
-                                        </li>
-                                    </ul>
-                                </div>
 
-                                {/* KPI 3: Agua */}
-                                <div className="p-3 bg-white border-2 border-slate-200 rounded-lg">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                            <Droplet className="w-5 h-5 text-blue-600" />
+                                    {/* KPI 3: Agua */}
+                                    <div className="p-3 bg-white border-2 border-slate-200 rounded-lg">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                                <Droplet className="w-5 h-5 text-blue-600" />
+                                            </div>
+                                            <h4 className="text-xs font-bold text-slate-800">Agua</h4>
                                         </div>
-                                        <h4 className="text-xs font-bold text-slate-800">Agua</h4>
-                                    </div>
-                                    <ul className="space-y-1">
-                                        <li className="text-[9px] text-slate-600 flex items-start gap-1">
-                                            <span className="text-blue-600">•</span>
-                                            <span>L/mes consumidos</span>
-                                        </li>
-                                        <li className="text-[9px] text-slate-600 flex items-start gap-1">
-                                            <span className="text-blue-600">•</span>
-                                            <span>Intensidad hídrica</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-
-                            <div className="mt-3 p-2 bg-purple-50 border border-purple-200 rounded-lg">
-                                <p className="text-[10px] text-purple-800">
-                                    <strong>Frecuencia sugerida:</strong> Medición mensual con revisión trimestral del comité ambiental.
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* SECCIÓN 4: PRÓXIMOS PASOS INMEDIATOS */}
-                        <div className="flex-shrink-0">
-                            <div className="flex items-center gap-2 mb-3">
-                                <div className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center">
-                                    <ArrowRight className="w-4 h-4 text-white" strokeWidth={2.5} />
-                                </div>
-                                <h3 className="text-sm font-bold text-slate-800">
-                                    Próximos pasos inmediatos
-                                </h3>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 mb-3">
-                                {/* Paso 1 */}
-                                <div className="flex gap-2 p-2 bg-white border-l-4 border-red-500 rounded-r-lg shadow-sm">
-                                    <CirculoNumeroSVG
-                                        numero={1}
-                                        size={24}
-                                        bgColor="#dc2626"
-                                        fontSize={12}
-                                    />
-                                    <div className="flex-1">
-                                        <h4 className="text-[10px] font-bold text-slate-800 mb-0.5">
-                                            Asignar responsables
-                                        </h4>
-                                        <p className="text-[9px] text-slate-600 leading-tight">
-                                            Designar líderes para cada acción prioritaria y definir roles del equipo.
-                                        </p>
+                                        <ul className="space-y-1">
+                                            <li className="text-[9px] text-slate-600 flex items-start gap-1">
+                                                <span className="text-blue-600">•</span>
+                                                <span>L/mes consumidos</span>
+                                            </li>
+                                            <li className="text-[9px] text-slate-600 flex items-start gap-1">
+                                                <span className="text-blue-600">•</span>
+                                                <span>Intensidad hídrica</span>
+                                            </li>
+                                        </ul>
                                     </div>
                                 </div>
 
-                                {/* Paso 2 */}
-                                <div className="flex gap-2 p-2 bg-white border-l-4 border-orange-500 rounded-r-lg shadow-sm">
-                                    <CirculoNumeroSVG
-                                        numero={2}
-                                        size={24}
-                                        bgColor="#ea580c"
-                                        fontSize={12}
-                                    />
-                                    <div className="flex-1">
-                                        <h4 className="text-[10px] font-bold text-slate-800 mb-0.5">
-                                            Aprobar presupuesto
-                                        </h4>
-                                        <p className="text-[9px] text-slate-600 leading-tight">
-                                            Presentar plan de inversión a dirección para aprobación financiera.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* Paso 3 */}
-                                <div className="flex gap-2 p-2 bg-white border-l-4 border-yellow-500 rounded-r-lg shadow-sm">
-                                    <CirculoNumeroSVG
-                                        numero={3}
-                                        size={24}
-                                        bgColor="#ca8a04"
-                                        fontSize={12}
-                                    />
-                                    <div className="flex-1">
-                                        <h4 className="text-[10px] font-bold text-slate-800 mb-0.5">
-                                            Kick-off del proyecto
-                                        </h4>
-                                        <p className="text-[9px] text-slate-600 leading-tight">
-                                            Reunión inicial con equipo, definición de hitos y cronograma detallado.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* Paso 4 */}
-                                <div className="flex gap-2 p-2 bg-white border-l-4 border-green-500 rounded-r-lg shadow-sm">
-                                    <CirculoNumeroSVG
-                                        numero={4}
-                                        size={24}
-                                        bgColor="#16a34a"
-                                        fontSize={12}
-                                    />
-                                    <div className="flex-1">
-                                        <h4 className="text-[10px] font-bold text-slate-800 mb-0.5">
-                                            Programar seguimiento
-                                        </h4>
-                                        <p className="text-[9px] text-slate-600 leading-tight">
-                                            Agendar próxima evaluación en 6 meses para medir progreso.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Cierre motivacional */}
-                        <div className="mt-auto pt-4 border-t-2 border-emerald-500 flex-shrink-0">
-                            <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-emerald-50 to-green-50 rounded-lg">
-                                <div className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <CheckCircle className="w-6 h-6 text-white" strokeWidth={2.5} />
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-xs font-bold text-emerald-900 mb-1">
-                                        ¡Es momento de actuar!
-                                    </p>
-                                    <p className="text-[10px] text-emerald-800 leading-relaxed">
-                                        Este plan de acción es su guía para mejorar el desempeño ambiental.
-                                        La implementación gradual y el seguimiento constante son clave para el éxito.
+                                <div className="mt-3 p-2 bg-purple-50 border border-purple-200 rounded-lg">
+                                    <p className="text-[10px] text-purple-800">
+                                        <strong>Frecuencia sugerida:</strong> Medición mensual con revisión trimestral del comité ambiental.
                                     </p>
                                 </div>
                             </div>
-                        </div>
 
-                    </section>
-                );
-            })()}
+                            {/* SECCIÓN 4: PRÓXIMOS PASOS INMEDIATOS */}
+                            <div className="flex-shrink-0">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <div className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center">
+                                        <ArrowRight className="w-4 h-4 text-white" strokeWidth={2.5} />
+                                    </div>
+                                    <h3 className="text-sm font-bold text-slate-800">
+                                        Próximos pasos inmediatos
+                                    </h3>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 mb-3">
+                                    {/* Paso 1 */}
+                                    <div className="flex gap-2 p-2 bg-white border-l-4 border-red-500 rounded-r-lg shadow-sm">
+                                        <CirculoNumeroSVG
+                                            numero={1}
+                                            size={24}
+                                            bgColor="#dc2626"
+                                            fontSize={12}
+                                        />
+                                        <div className="flex-1">
+                                            <h4 className="text-[10px] font-bold text-slate-800 mb-0.5">
+                                                Asignar responsables
+                                            </h4>
+                                            <p className="text-[9px] text-slate-600 leading-tight">
+                                                Designar líderes para cada acción prioritaria y definir roles del equipo.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Paso 2 */}
+                                    <div className="flex gap-2 p-2 bg-white border-l-4 border-orange-500 rounded-r-lg shadow-sm">
+                                        <CirculoNumeroSVG
+                                            numero={2}
+                                            size={24}
+                                            bgColor="#ea580c"
+                                            fontSize={12}
+                                        />
+                                        <div className="flex-1">
+                                            <h4 className="text-[10px] font-bold text-slate-800 mb-0.5">
+                                                Aprobar presupuesto
+                                            </h4>
+                                            <p className="text-[9px] text-slate-600 leading-tight">
+                                                Presentar plan de inversión a dirección para aprobación financiera.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Paso 3 */}
+                                    <div className="flex gap-2 p-2 bg-white border-l-4 border-yellow-500 rounded-r-lg shadow-sm">
+                                        <CirculoNumeroSVG
+                                            numero={3}
+                                            size={24}
+                                            bgColor="#ca8a04"
+                                            fontSize={12}
+                                        />
+                                        <div className="flex-1">
+                                            <h4 className="text-[10px] font-bold text-slate-800 mb-0.5">
+                                                Kick-off del proyecto
+                                            </h4>
+                                            <p className="text-[9px] text-slate-600 leading-tight">
+                                                Reunión inicial con equipo, definición de hitos y cronograma detallado.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Paso 4 */}
+                                    <div className="flex gap-2 p-2 bg-white border-l-4 border-green-500 rounded-r-lg shadow-sm">
+                                        <CirculoNumeroSVG
+                                            numero={4}
+                                            size={24}
+                                            bgColor="#16a34a"
+                                            fontSize={12}
+                                        />
+                                        <div className="flex-1">
+                                            <h4 className="text-[10px] font-bold text-slate-800 mb-0.5">
+                                                Programar seguimiento
+                                            </h4>
+                                            <p className="text-[9px] text-slate-600 leading-tight">
+                                                Agendar próxima evaluación en 6 meses para medir progreso.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Cierre motivacional */}
+                            <div className="mt-auto pt-4 border-t-2 border-emerald-500 flex-shrink-0">
+                                <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-emerald-50 to-green-50 rounded-lg">
+                                    <div className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <CheckCircle className="w-6 h-6 text-white" strokeWidth={2.5} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-xs font-bold text-emerald-900 mb-1">
+                                            ¡Es momento de actuar!
+                                        </p>
+                                        <p className="text-[10px] text-emerald-800 leading-relaxed">
+                                            Este plan de acción es su guía para mejorar el desempeño ambiental.
+                                            La implementación gradual y el seguimiento constante son clave para el éxito.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </section>
+                    );
+                })()
+            }
 
 
-        </div>
+        </div >
     );
 }
 

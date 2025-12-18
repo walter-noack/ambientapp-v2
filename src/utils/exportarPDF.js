@@ -13,9 +13,7 @@ import html2pdf from 'html2pdf.js';
  */
 export async function exportarComponenteAPDF(elementId, filename, options = {}) {
   try {
-    console.log('🚀 Iniciando exportación PDF...');
-    console.log('📋 ElementId:', elementId);
-    console.log('📄 Filename:', filename);
+
 
     const element = document.getElementById(elementId);
 
@@ -25,7 +23,7 @@ export async function exportarComponenteAPDF(elementId, filename, options = {}) 
       return { success: false, error };
     }
 
-    console.log('✅ Elemento encontrado');
+
 
     // CONFIGURACIÓN OPTIMIZADA PARA CÍRCULOS Y ALINEACIÓN
     const defaultOptions = {
@@ -73,23 +71,22 @@ export async function exportarComponenteAPDF(elementId, filename, options = {}) 
     };
 
     const finalOptions = { ...defaultOptions, ...options };
-    console.log('⚙️ Opciones:', finalOptions);
 
-    console.log('🎨 Iniciando conversión...');
+
 
     await html2pdf()
       .from(element)
       .set(finalOptions)
       .save()
       .then(() => {
-        console.log('✅ PDF generado exitosamente');
+
       })
       .catch((pdfError) => {
         console.error('❌ Error en html2pdf:', pdfError);
         throw pdfError;
       });
 
-    console.log('🎉 Exportación completada');
+
     return { success: true };
 
   } catch (error) {
@@ -106,7 +103,7 @@ export async function exportarComponenteAPDF(elementId, filename, options = {}) 
  */
 export async function generarPDFOculto(ComponentToRender, filename, options = {}) {
   try {
-    console.log('👻 Generando PDF oculto...');
+
 
     const container = document.createElement('div');
     container.id = 'pdf-temp-container';
@@ -125,7 +122,7 @@ export async function generarPDFOculto(ComponentToRender, filename, options = {}
     const result = await exportarComponenteAPDF('pdf-root', filename, options);
 
     document.body.removeChild(container);
-    console.log('🧹 Contenedor temporal eliminado');
+
 
     return result;
 

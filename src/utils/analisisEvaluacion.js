@@ -7,22 +7,25 @@
 export function identificarFortalezas(evaluacion) {
   const fortalezas = [];
   const scores = evaluacion?.scores || {};
-  
+
   // CARBONO
   if (scores.carbonScore >= 85) {
-    const total = (evaluacion.alcance1 || 0) + (evaluacion.alcance2 || 0);
+    const alcance1 = evaluacion?.carbono?.emisionesScope1 || evaluacion?.alcance1 || 0;
+    const alcance2 = evaluacion?.carbono?.emisionesScope2 || evaluacion?.alcance2 || 0;
+    const total = alcance1 + alcance2;
+
     fortalezas.push({
       area: 'Huella de Carbono',
       puntaje: scores.carbonScore,
-      dato: `${(total / 1000).toFixed(2)} tCO₂e`,
+      dato: `${(total / 1000).toFixed(2).replace('.', ',')} tCO₂e`,
       destaque: 'Emisiones controladas y monitoreadas efectivamente',
       icono: 'Leaf'
     });
   }
-  
+
   // AGUA
   if (scores.waterScore >= 85) {
-    const consumo = evaluacion.consumoAgua || 0;
+    const consumo = evaluacion?.agua?.consumoTotal || evaluacion?.waterData?.consumoMensual || 0;
     fortalezas.push({
       area: 'Gestión Hídrica',
       puntaje: scores.waterScore,
@@ -31,28 +34,29 @@ export function identificarFortalezas(evaluacion) {
       icono: 'Droplet'
     });
   }
-  
+
   // RESIDUOS
   if (scores.wasteScore >= 85) {
-    const tasa = evaluacion.residuosGenerados > 0
-      ? ((evaluacion.residuosValorizados / evaluacion.residuosGenerados) * 100).toFixed(1)
-      : 0;
+    const generados = evaluacion?.residuos?.generados || evaluacion?.residuosGenerados || 0;
+    const valorizados = evaluacion?.residuos?.valorizados || evaluacion?.residuosValorizados || 0;
+    const tasa = generados > 0 ? ((valorizados / generados) * 100) : 0;
+
     fortalezas.push({
       area: 'Gestión de Residuos',
       puntaje: scores.wasteScore,
-      dato: `${tasa}% valorización`,
+      dato: `${tasa.toFixed(1).replace('.', ',')}% valorización`,
       destaque: 'Alta tasa de valorización de residuos',
       icono: 'Recycle'
     });
   }
-  
+
   // REP - Productos con valorización >= 85%
   const productosREP = evaluacion.productosREP || [];
   productosREP.forEach(producto => {
     const tasaValor = producto.cantidadGenerada > 0
       ? (producto.cantidadValorizada / producto.cantidadGenerada) * 100
       : 0;
-    
+
     if (tasaValor >= 85) {
       fortalezas.push({
         area: `REP: ${producto.producto}`,
@@ -63,7 +67,7 @@ export function identificarFortalezas(evaluacion) {
       });
     }
   });
-  
+
   return fortalezas;
 }
 
@@ -74,34 +78,34 @@ export function identificarFortalezas(evaluacion) {
 export function identificarOportunidades(evaluacion) {
   const oportunidades = [];
   const scores = evaluacion?.scores || {};
-  
+
   // CARBONO
   if (scores.carbonScore < 70) {
     const alcance1 = evaluacion.alcance1 || 0;
     const alcance2 = evaluacion.alcance2 || 0;
     const total = alcance1 + alcance2;
     const mayorAlcance = alcance1 > alcance2 ? 'combustibles (Alcance 1)' : 'electricidad (Alcance 2)';
-    const porcentajeMayor = alcance1 > alcance2 
+    const porcentajeMayor = alcance1 > alcance2
       ? ((alcance1 / total) * 100).toFixed(1)
       : ((alcance2 / total) * 100).toFixed(1);
-    
+
     oportunidades.push({
       area: 'Huella de Carbono',
       puntaje: scores.carbonScore,
       gap: `${100 - scores.carbonScore} puntos por debajo del nivel óptimo`,
       causa: `${porcentajeMayor}% de emisiones provienen de ${mayorAlcance}`,
-      accionClave: alcance1 > alcance2 
+      accionClave: alcance1 > alcance2
         ? 'Optimizar uso de combustibles y flotas'
         : 'Mejorar eficiencia energética',
       icono: 'AlertTriangle'
     });
   }
-  
+
   // AGUA
   if (scores.waterScore < 70) {
     const consumo = evaluacion.consumoAgua || 0;
     const intensidad = evaluacion.intensidadHidrica?.valor || 0;
-    
+
     oportunidades.push({
       area: 'Gestión Hídrica',
       puntaje: scores.waterScore,
@@ -111,13 +115,13 @@ export function identificarOportunidades(evaluacion) {
       icono: 'Droplet'
     });
   }
-  
+
   // RESIDUOS
   if (scores.wasteScore < 70) {
     const tasa = evaluacion.residuosGenerados > 0
       ? ((evaluacion.residuosValorizados / evaluacion.residuosGenerados) * 100).toFixed(1)
       : 0;
-    
+
     oportunidades.push({
       area: 'Gestión de Residuos',
       puntaje: scores.wasteScore,
@@ -127,17 +131,17 @@ export function identificarOportunidades(evaluacion) {
       icono: 'Trash2'
     });
   }
-  
+
   // REP - Productos bajo meta
   const productosREP = evaluacion.productosREP || [];
   productosREP.forEach(producto => {
     const tasaValor = producto.cantidadGenerada > 0
       ? (producto.cantidadValorizada / producto.cantidadGenerada) * 100
       : 0;
-    
+
     // Metas simplificadas (se puede mejorar con metasREP.js)
     const meta = 50;
-    
+
     if (tasaValor < meta) {
       oportunidades.push({
         area: `REP: ${producto.producto}`,
@@ -149,7 +153,7 @@ export function identificarOportunidades(evaluacion) {
       });
     }
   });
-  
+
   return oportunidades;
 }
 
@@ -161,7 +165,7 @@ export function generarRecomendacionesPriorizadas(evaluacion) {
   const scores = evaluacion?.scores || {};
   const alcance1 = evaluacion.alcance1 || 0;
   const alcance2 = evaluacion.alcance2 || 0;
-  
+
   // RECOMENDACIÓN 1: Eficiencia energética (si Alcance 2 es alto)
   if (alcance2 > alcance1 * 0.4) {
     const porcentajeA2 = ((alcance2 / (alcance1 + alcance2)) * 100).toFixed(1);
@@ -197,12 +201,12 @@ export function generarRecomendacionesPriorizadas(evaluacion) {
       esfuerzoNumerico: 5
     });
   }
-  
+
   // RECOMENDACIÓN 2: Separación de residuos
   const tasaValor = evaluacion.residuosGenerados > 0
     ? (evaluacion.residuosValorizados / evaluacion.residuosGenerados) * 100
     : 0;
-  
+
   if (tasaValor < 75) {
     recomendaciones.push({
       id: 2,
@@ -236,7 +240,7 @@ export function generarRecomendacionesPriorizadas(evaluacion) {
       esfuerzoNumerico: 3
     });
   }
-  
+
   // RECOMENDACIÓN 3: Sistema de gestión ISO 14001
   if (scores.carbonScore < 75 || scores.waterScore < 75 || scores.wasteScore < 75) {
     recomendaciones.push({
@@ -272,14 +276,14 @@ export function generarRecomendacionesPriorizadas(evaluacion) {
       esfuerzoNumerico: 8
     });
   }
-  
+
   // RECOMENDACIÓN 4: Cumplimiento REP
   const productosREP = evaluacion.productosREP || [];
   const productosBajoMeta = productosREP.filter(p => {
     const tasa = p.cantidadGenerada > 0 ? (p.cantidadValorizada / p.cantidadGenerada) * 100 : 0;
     return tasa < 50;
   });
-  
+
   if (productosBajoMeta.length > 0) {
     recomendaciones.push({
       id: 4,
@@ -314,7 +318,7 @@ export function generarRecomendacionesPriorizadas(evaluacion) {
       esfuerzoNumerico: 2
     });
   }
-  
+
   // RECOMENDACIÓN 5: Economía circular avanzada
   if (tasaValor >= 70) {
     recomendaciones.push({
@@ -350,7 +354,7 @@ export function generarRecomendacionesPriorizadas(evaluacion) {
       esfuerzoNumerico: 8
     });
   }
-  
+
   // Ordenar por prioridad (impacto vs esfuerzo)
   return recomendaciones.sort((a, b) => {
     // Score = impacto / esfuerzo (mayor es mejor)
@@ -366,7 +370,7 @@ export function generarRecomendacionesPriorizadas(evaluacion) {
 export function generarRoadmap(recomendaciones) {
   const altaPrioridad = recomendaciones.filter(r => r.prioridad === 'Alta');
   const mediaPrioridad = recomendaciones.filter(r => r.prioridad === 'Media');
-  
+
   return [
     {
       semestre: 'S1 2025',
@@ -393,7 +397,7 @@ export function generarRoadmap(recomendaciones) {
  * Identifica Quick Wins (impacto alto, esfuerzo bajo)
  */
 export function identificarQuickWins(recomendaciones) {
-  return recomendaciones.filter(r => 
+  return recomendaciones.filter(r =>
     r.impactoNumerico >= 7 && r.esfuerzoNumerico <= 4
   );
 }

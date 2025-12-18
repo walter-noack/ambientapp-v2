@@ -21,12 +21,18 @@ export function AuthProvider({ children }) {
       try {
         const token = localStorage.getItem('token');
         if (token) {
-          const userData = await getCurrentUser();
-          setUser(userData);
+          const response = await getCurrentUser();
+          if (response.success) {
+            setUser(response.data.user);
+          } else {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+          }
         }
       } catch (error) {
         console.error('Error verificando autenticación:', error);
         localStorage.removeItem('token');
+        localStorage.removeItem('user');
       } finally {
         setLoading(false);
       }
@@ -36,29 +42,28 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (email, password) => {
-  // 🔓 BYPASS TEMPORAL - SOLO PARA DESARROLLO
-  try {
-    // Simular login exitoso
-    const fakeUser = {
-      email: email,
-      name: 'Usuario Demo',
-      id: 'demo-123'
-    };
-    
-    const fakeToken = 'fake-token-' + Date.now();
-    
-    localStorage.setItem('token', fakeToken);
-    setUser(fakeUser);
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Error en login:', error);
-    return { 
-      success: false, 
-      error: 'Error al iniciar sesión' 
-    };
-  }
-};
+    try {
+      const response = await loginUser({ email, password });
+
+      if (response.success) {
+        // El token ya se guarda automáticamente en loginUser (api.js)
+        // Solo necesitamos actualizar el estado del usuario
+        setUser(response.data.user);
+        return { success: true };
+      } else {
+        return {
+          success: false,
+          error: response.message || 'Error al iniciar sesión'
+        };
+      }
+    } catch (error) {
+      console.error('Error en login:', error);
+      return {
+        success: false,
+        error: error.message || 'Error de conexión'
+      };
+    }
+  };
 
   const logout = async () => {
     try {

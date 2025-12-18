@@ -18,11 +18,17 @@ export default function ListaEvaluaciones() {
   useEffect(() => {
     async function load() {
       try {
-        const data = await getEvaluaciones();
+        const response = await getEvaluaciones();
+
+        // El backend devuelve { success: true, data: { diagnosticos: [...] } }
+        const data = response.data?.diagnosticos || [];
+
         setEvaluaciones(data);
         setEvaluacionesFiltradas(data);
       } catch (error) {
         console.error("Error cargando evaluaciones:", error);
+        setEvaluaciones([]);
+        setEvaluacionesFiltradas([]);
       } finally {
         setLoading(false);
       }
@@ -41,26 +47,27 @@ export default function ListaEvaluaciones() {
       );
     }
 
-    // Filtro por nivel
+    // Filtro por nivel (usar puntuacionGeneral del backend)
     if (filtroNivel !== "todos") {
       resultado = resultado.filter(ev => {
-        if (filtroNivel === "avanzado") return ev.finalScore >= 75;
-        if (filtroNivel === "intermedio") return ev.finalScore >= 50 && ev.finalScore < 75;
-        if (filtroNivel === "basico") return ev.finalScore >= 25 && ev.finalScore < 50;
-        if (filtroNivel === "bajo") return ev.finalScore < 25;
+        const score = ev.puntuacionGeneral || 0;
+        if (filtroNivel === "avanzado") return score >= 75;
+        if (filtroNivel === "intermedio") return score >= 50 && score < 75;
+        if (filtroNivel === "basico") return score >= 25 && score < 50;
+        if (filtroNivel === "bajo") return score < 25;
         return true;
       });
     }
 
-    // Ordenamiento
+    // Ordenamiento (usar puntuacionGeneral del backend)
     if (ordenamiento === "recientes") {
       resultado.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     } else if (ordenamiento === "antiguos") {
       resultado.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     } else if (ordenamiento === "puntaje-alto") {
-      resultado.sort((a, b) => b.finalScore - a.finalScore);
+      resultado.sort((a, b) => (b.puntuacionGeneral || 0) - (a.puntuacionGeneral || 0));
     } else if (ordenamiento === "puntaje-bajo") {
-      resultado.sort((a, b) => a.finalScore - b.finalScore);
+      resultado.sort((a, b) => (a.puntuacionGeneral || 0) - (b.puntuacionGeneral || 0));
     } else if (ordenamiento === "empresa") {
       resultado.sort((a, b) => a.companyName.localeCompare(b.companyName));
     }
@@ -121,7 +128,7 @@ export default function ListaEvaluaciones() {
         {/* Filtros y búsqueda */}
         <Card className="p-6 mb-6">
           <div className="grid md:grid-cols-3 gap-4">
-            
+
             {/* Búsqueda */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -217,10 +224,15 @@ export default function ListaEvaluaciones() {
 
                 <tbody className="divide-y divide-slate-200">
                   {evaluacionesFiltradas.map((ev) => {
+                    const score = ev.puntuacionGeneral || 0;
                     let nivel = "bajo";
-                    if (ev.finalScore >= 75) nivel = "avanzado";
-                    else if (ev.finalScore >= 50) nivel = "intermedio";
-                    else if (ev.finalScore >= 25) nivel = "basico";
+                    if (score >= 75) nivel = "avanzado";
+                    else if (score >= 50) nivel = "intermedio";
+                    else if (score >= 25) nivel = "basico";
+
+                    // Construir period del backend (semestre + año)
+                    const period = `${ev.semestre}-${ev.anio}`;
+
 
                     return (
                       <tr key={ev._id} className="hover:bg-slate-50 transition-colors">

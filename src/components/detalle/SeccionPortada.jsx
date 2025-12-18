@@ -1,19 +1,29 @@
 import { Award, Calendar, Building2, Leaf } from 'lucide-react';
 
 export function SeccionPortada({ evaluacion }) {
+  // Obtener puntuación del backend
+  const finalScore = evaluacion?.puntuacionGeneral || 0;
+  const nivelBackend = evaluacion?.nivelDesempeno || 'Bajo';
+  
+  // Construir período del backend
+  const period = `${evaluacion?.semestre || 'S1'}-${evaluacion?.anio || new Date().getFullYear()}`;
+  
   // Determinar nivel y color
-  let nivel = "Bajo";
-  let colorNivel = "#DC2626";
+  let nivel = nivelBackend;
+  let colorNivel = "#DC2626"; // Rojo por defecto (Bajo)
 
-  if (evaluacion.finalScore >= 75) {
+  if (finalScore >= 80) {
     nivel = "Avanzado";
-    colorNivel = "#0068ec";
-  } else if (evaluacion.finalScore >= 50) {
+    colorNivel = "#0068ec"; // Azul
+  } else if (finalScore >= 60) {
     nivel = "Intermedio";
-    colorNivel = "#73c91b";
-  } else if (evaluacion.finalScore >= 25) {
+    colorNivel = "#73c91b"; // Verde
+  } else if (finalScore >= 30) {
     nivel = "Básico";
-    colorNivel = "#f59e0b";
+    colorNivel = "#f59e0b"; // Amarillo
+  } else {
+    nivel = "Bajo";
+    colorNivel = "#DC2626"; // Rojo
   }
 
   return (
@@ -45,7 +55,7 @@ export function SeccionPortada({ evaluacion }) {
             className="text-3xl font-bold mb-1"
             style={{ color: colorNivel }}
           >
-            {Number(evaluacion.finalScore).toFixed(1)}
+            {finalScore}
           </p>
           <p
             className="text-sm font-semibold uppercase tracking-wide"
@@ -70,7 +80,7 @@ export function SeccionPortada({ evaluacion }) {
             Diagnóstico Ambiental
           </h1>
           <h2 className="text-3xl font-semibold text-slate-700">
-            {evaluacion.companyName}
+            {evaluacion?.companyName || 'Empresa'}
           </h2>
         </div>
 
@@ -84,7 +94,7 @@ export function SeccionPortada({ evaluacion }) {
               <p className="text-xs uppercase text-slate-500 tracking-wider mb-1">
                 Período evaluado
               </p>
-              <p className="font-semibold text-slate-800">{evaluacion.period}</p>
+              <p className="font-semibold text-slate-800">{period}</p>
             </div>
           </div>
 
