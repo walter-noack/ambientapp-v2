@@ -137,11 +137,11 @@ export default function MainLayout() {
               </div>
             </div>
             <div className="flex gap-6 text-sm text-slate-600">
-              <a href="#" className="hover:text-primary-600 transition-colors">
+              <a href="/soporte" className="hover:text-primary-600 transition-colors">
                 Soporte
               </a>
               <a
-                href="#"
+                href="/documentacion"
                 className="hover:text-primary-600 transition-colors"
               >
                 Documentación

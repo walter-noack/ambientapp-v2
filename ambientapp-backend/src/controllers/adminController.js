@@ -1,5 +1,81 @@
 const User = require('../models/User');
 const Diagnostico = require('../models/Diagnostico');
+const bcrypt = require('bcryptjs');
+
+// Nueva función: crear usuario (admin)
+const crearUsuarioAdmin = async (req, res) => {
+  try {
+    const {
+      nombre,
+      email,
+      password,
+      empresa,
+      rut,
+      telefono,
+      role = 'user',
+      tipoSuscripcion = 'free',
+      estadoSuscripcion = 'activa'
+    } = req.body;
+
+    // Validaciones mínimas
+    if (!nombre || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Por favor proporciona nombre, email y contraseña'
+      });
+    }
+
+    // Verificar si existe
+    const existe = await User.findOne({ email });
+    if (existe) {
+      return res.status(400).json({
+        success: false,
+        message: 'El email ya está registrado'
+      });
+    }
+
+    // Hashear password
+    const salt = await bcrypt.genSalt(10);
+    const hashed = await bcrypt.hash(password, salt);
+
+    const nuevoUsuario = await User.create({
+      nombre,
+      email,
+      password: hashed,
+      empresa,
+      rut,
+      telefono,
+      role,
+      tipoSuscripcion,
+      estadoSuscripcion
+    });
+
+    // Opcional: verificar/resetear límites si tu modelo lo necesita
+    if (typeof nuevoUsuario.verificarYResetearLimites === 'function') {
+      nuevoUsuario.verificarYResetearLimites();
+      await nuevoUsuario.save();
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Usuario creado correctamente',
+      data: {
+        usuario: {
+          ...nuevoUsuario.toObject(),
+          password: undefined,
+          planInfo: nuevoUsuario.planInfo
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error crearUsuarioAdmin:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al crear usuario',
+      error: error.message
+    });
+  }
+};
 
 // @desc    Listar todos los usuarios (con filtros)
 // @route   GET /api/admin/users
@@ -7,18 +83,18 @@ const Diagnostico = require('../models/Diagnostico');
 const listarUsuarios = async (req, res) => {
   try {
     const { plan, estado, busqueda, ordenar = 'reciente', page = 1, limit = 20 } = req.query;
-    
+
     // Construir filtro
     let filtro = {};
-    
+
     if (plan && plan !== 'todos') {
       filtro.tipoSuscripcion = plan;
     }
-    
+
     if (estado && estado !== 'todos') {
       filtro.estadoSuscripcion = estado;
     }
-    
+
     if (busqueda) {
       filtro.$or = [
         { nombre: { $regex: busqueda, $options: 'i' } },
@@ -26,7 +102,7 @@ const listarUsuarios = async (req, res) => {
         { empresa: { $regex: busqueda, $options: 'i' } }
       ];
     }
-    
+
     // Configurar ordenamiento
     let sort = {};
     switch (ordenar) {
@@ -45,20 +121,20 @@ const listarUsuarios = async (req, res) => {
       default:
         sort = { createdAt: -1 };
     }
-    
+
     // Paginación
     const skip = (page - 1) * limit;
-    
+
     // Obtener usuarios
     const usuarios = await User.find(filtro)
       .select('-password')
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
-    
+
     // Contar total
     const total = await User.countDocuments(filtro);
-    
+
     // Agregar estadísticas por usuario
     const usuariosConStats = await Promise.all(
       usuarios.map(async (user) => {
@@ -69,7 +145,7 @@ const listarUsuarios = async (req, res) => {
         };
       })
     );
-    
+
     res.status(200).json({
       success: true,
       data: {
@@ -82,7 +158,7 @@ const listarUsuarios = async (req, res) => {
         }
       }
     });
-    
+
   } catch (error) {
     console.error('Error al listar usuarios:', error);
     res.status(500).json({
@@ -99,24 +175,24 @@ const listarUsuarios = async (req, res) => {
 const obtenerUsuario = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const usuario = await User.findById(id).select('-password');
-    
+
     if (!usuario) {
       return res.status(404).json({
         success: false,
         message: 'Usuario no encontrado'
       });
     }
-    
+
     // Obtener diagnósticos del usuario
     const diagnosticos = await Diagnostico.find({ usuario: id })
       .select('companyName puntuacionGeneral nivelDesempeno createdAt')
       .sort({ createdAt: -1 })
       .limit(10);
-    
+
     const diagnosticosCount = await Diagnostico.countDocuments({ usuario: id });
-    
+
     res.status(200).json({
       success: true,
       data: {
@@ -128,7 +204,7 @@ const obtenerUsuario = async (req, res) => {
         diagnosticosCount
       }
     });
-    
+
   } catch (error) {
     console.error('Error al obtener usuario:', error);
     res.status(500).json({
@@ -139,23 +215,24 @@ const obtenerUsuario = async (req, res) => {
   }
 };
 
-// @desc    Actualizar usuario (cambiar plan, suspender, etc.)
-// @route   PUT /api/admin/users/:id
-// @access  Private/Admin
 const actualizarUsuario = async (req, res) => {
   try {
     const { id } = req.params;
-    const { tipoSuscripcion, estadoSuscripcion, limites, features, notas } = req.body;
-    
+    const { tipoSuscripcion, estadoSuscripcion, limites, features, notas, role } = req.body;
+
     const usuario = await User.findById(id);
-    
+
     if (!usuario) {
       return res.status(404).json({
         success: false,
         message: 'Usuario no encontrado'
       });
     }
-    
+
+    if (role) {
+      usuario.role = role;
+    }
+
     // Actualizar campos permitidos
     if (tipoSuscripcion) {
       if (tipoSuscripcion === 'pro' && usuario.tipoSuscripcion !== 'pro') {
@@ -163,7 +240,7 @@ const actualizarUsuario = async (req, res) => {
         await usuario.actualizarAPro();
       } else {
         usuario.tipoSuscripcion = tipoSuscripcion;
-        
+
         // Si downgrade a Free, restaurar límites
         if (tipoSuscripcion === 'free') {
           usuario.limites.diagnosticosMes = 4;
@@ -175,21 +252,21 @@ const actualizarUsuario = async (req, res) => {
         }
       }
     }
-    
+
     if (estadoSuscripcion) {
       usuario.estadoSuscripcion = estadoSuscripcion;
     }
-    
+
     if (limites) {
       usuario.limites = { ...usuario.limites, ...limites };
     }
-    
+
     if (features) {
       usuario.features = { ...usuario.features, ...features };
     }
-    
+
     await usuario.save();
-    
+
     res.status(200).json({
       success: true,
       message: 'Usuario actualizado correctamente',
@@ -200,7 +277,7 @@ const actualizarUsuario = async (req, res) => {
         }
       }
     });
-    
+
   } catch (error) {
     console.error('Error al actualizar usuario:', error);
     res.status(500).json({
@@ -217,27 +294,27 @@ const actualizarUsuario = async (req, res) => {
 const eliminarUsuario = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const usuario = await User.findById(id);
-    
+
     if (!usuario) {
       return res.status(404).json({
         success: false,
         message: 'Usuario no encontrado'
       });
     }
-    
+
     // Eliminar todos los diagnósticos del usuario
     await Diagnostico.deleteMany({ usuario: id });
-    
+
     // Eliminar usuario
     await User.findByIdAndDelete(id);
-    
+
     res.status(200).json({
       success: true,
       message: 'Usuario eliminado correctamente'
     });
-    
+
   } catch (error) {
     console.error('Error al eliminar usuario:', error);
     res.status(500).json({
@@ -258,23 +335,23 @@ const obtenerEstadisticasGenerales = async (req, res) => {
     const usuariosFree = await User.countDocuments({ tipoSuscripcion: 'free' });
     const usuariosPro = await User.countDocuments({ tipoSuscripcion: 'pro' });
     const usuariosActivos = await User.countDocuments({ estadoSuscripcion: 'activa' });
-    
+
     // Diagnósticos
     const totalDiagnosticos = await Diagnostico.countDocuments();
     const diagnosticosUltimoMes = await Diagnostico.countDocuments({
       createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
     });
-    
+
     // Usuarios nuevos último mes
     const usuariosNuevos = await User.countDocuments({
       createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
     });
-    
+
     // Promedio de diagnósticos por usuario
-    const promedioDiagnosticosPorUsuario = totalUsuarios > 0 
-      ? (totalDiagnosticos / totalUsuarios).toFixed(2) 
+    const promedioDiagnosticosPorUsuario = totalUsuarios > 0
+      ? (totalDiagnosticos / totalUsuarios).toFixed(2)
       : 0;
-    
+
     res.status(200).json({
       success: true,
       data: {
@@ -292,7 +369,7 @@ const obtenerEstadisticasGenerales = async (req, res) => {
         }
       }
     });
-    
+
   } catch (error) {
     console.error('Error al obtener estadísticas:', error);
     res.status(500).json({
@@ -308,5 +385,6 @@ module.exports = {
   obtenerUsuario,
   actualizarUsuario,
   eliminarUsuario,
-  obtenerEstadisticasGenerales
+  obtenerEstadisticasGenerales,
+  crearUsuarioAdmin
 };

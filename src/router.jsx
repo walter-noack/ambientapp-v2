@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 
 // Layout
@@ -14,6 +14,9 @@ import NuevaEvaluacion from './pages/NuevaEvaluacion';
 import EditarEvaluacion from './pages/EditarEvaluacion';
 import PreviewPDF from './pages/PreviewPDF';
 import AcercaDe from './pages/AcercaDe';
+import Landing from './pages/Landing';
+import Documentation from './pages/Documentation';
+import Soporte from './pages/Soporte';
 
 import UsuariosAdmin from './pages/Admin/UsuariosAdmin';
 import Perfil from './pages/Perfil';
@@ -85,6 +88,14 @@ export default function AppRouter() {
     <Routes>
       {/* Rutas públicas */}
       <Route
+        path="/"
+        element={
+          <PublicRoute>
+            <Landing />
+          </PublicRoute>
+        }
+      />
+      <Route
         path="/login"
         element={
           <PublicRoute>
@@ -102,17 +113,15 @@ export default function AppRouter() {
       />
 
       {/* Rutas protegidas con layout */}
-      <Route path="/" element={<ProtectedRoute> <MainLayout /> </ProtectedRoute>}>
-
-        {/* Dashboard */}
-        <Route index element={<Navigate to="/dashboard" replace />} />
+      <Route path="/*" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+        {/* Dashboard sin index ni path="/" */}
         <Route path="dashboard" element={<Dashboard />} />
 
         {/* Evaluaciones */}
         <Route path="evaluaciones" element={<ListaEvaluaciones />} />
-        <Route path="/evaluaciones/nueva" element={<NuevaEvaluacion />} />
-        <Route path="/evaluaciones/editar/:id" element={<NuevaEvaluacion modoEdicion={true} />} />
-        <Route path="/evaluaciones/duplicar/:id" element={<NuevaEvaluacion modoDuplicar={true} />} />
+        <Route path="evaluaciones/nueva" element={<NuevaEvaluacion />} />
+        <Route path="evaluaciones/editar/:id" element={<NuevaEvaluacion modoEdicion={true} />} />
+        <Route path="evaluaciones/duplicar/:id" element={<NuevaEvaluacion modoDuplicar={true} />} />
 
         {/* Detalle */}
         <Route path="detalle/:id" element={<DetalleEvaluacion />} />
@@ -122,6 +131,12 @@ export default function AppRouter() {
 
         {/* Acerca de */}
         <Route path="acerca-de" element={<AcercaDe />} />
+
+        {/* Documentación */}
+        <Route path="documentacion" element={<Documentation />} />
+
+        {/* Soporte */}
+        <Route path="soporte" element={<Soporte />} />
 
         {/* Perfil */}
         <Route path="perfil" element={<Perfil />} />
@@ -138,10 +153,13 @@ export default function AppRouter() {
             </AdminRoute>
           }
         />
+
+        {/* Ruta catch-all protegida: redirige a dashboard */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
 
-      {/* 404 */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      {/* Ruta catch-all pública: redirige a landing */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

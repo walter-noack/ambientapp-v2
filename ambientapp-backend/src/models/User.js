@@ -258,7 +258,7 @@ userSchema.methods.getInfoPlan = function() {
 // Método: Actualizar a plan Pro
 userSchema.methods.actualizarAPro = function() {
   this.tipoSuscripcion = 'pro';
-  this.limites.diagnosticosMes = -1;
+  this.limites.diagnosticosMes = null;
   this.limites.maxUsuarios = 5;
   this.features.exportarPDF = true;
   this.features.recomendacionesCompletas = true;

@@ -5,6 +5,7 @@ import {
   deleteUser,
   updateUser,
   getAdminStats,
+  createUser
 } from '../../services/adminApi';
 
 const INITIAL_FILTERS = {
@@ -36,6 +37,19 @@ const UsuariosAdmin = () => {
   });
   const [saving, setSaving] = useState(false);
 
+  // Modal crear usuario
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newUserForm, setNewUserForm] = useState({
+    nombre: '',
+    email: '',
+    password: '',
+    empresa: '',
+    tipoSuscripcion: 'free',
+    estadoSuscripcion: 'activa',
+    role: 'user',
+  });
+  const [creating, setCreating] = useState(false);
+
   // Confirmación eliminar
   const [userToDelete, setUserToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -55,17 +69,36 @@ const UsuariosAdmin = () => {
       if (filters.plan !== 'all') apiFilters.plan = filters.plan;
       if (filters.estado !== 'all') apiFilters.estado = filters.estado;
 
-      const data = await getUsers(apiFilters);
-      // Asumo que adminController devuelve algo como:
-      // { users, total, page, totalPages }
+      // Llamada a la API
+      const response = await getUsers(apiFilters);
+
+      // Normalizar distintos formatos posibles de respuesta
+      // Soporta tanto la forma ya normalizada por adminApi asímismo la forma raw
+      const payload =
+        response?.data?.data || // axios full response with { data: { data: ... } }
+        response?.data ||      // axios response with { data: ... }
+        response || {};        // direct return
+
+      // obtener usuarios y paginación con fallback
+      const usuarios = payload.usuarios || payload.users || response?.users || [];
+      const pagination =
+        payload.pagination ||
+        payload.pageData ||
+        {
+          page: payload.page || response?.page || filters.page,
+          limit: payload.limit || response?.limit || filters.limit,
+          total: payload.total || response?.total || usuarios.length,
+          pages: payload.pages || response?.totalPages || 1,
+        };
+
       setUsersData({
-        users: data.users || [],
-        total: data.total || 0,
-        page: data.page || 1,
-        totalPages: data.totalPages || 1,
+        users: usuarios,
+        total: pagination.total || usuarios.length,
+        page: pagination.page || filters.page,
+        totalPages: pagination.pages || pagination.totalPages || 1,
       });
     } catch (err) {
-      console.error(err);
+      console.error('Error fetchUsers:', err);
       setError(
         err.response?.data?.message || 'Error al cargar usuarios de administración'
       );
@@ -87,6 +120,7 @@ const UsuariosAdmin = () => {
 
   useEffect(() => {
     fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.page, filters.plan, filters.estado]); // búsqueda la ejecutamos por submit
 
   useEffect(() => {
@@ -172,6 +206,48 @@ const UsuariosAdmin = () => {
     }
   };
 
+  // Create user handlers
+  const openAddModal = () => {
+    setNewUserForm({
+      nombre: '',
+      email: '',
+      password: '',
+      empresa: '',
+      tipoSuscripcion: 'free',
+      estadoSuscripcion: 'activa',
+      role: 'user',
+    });
+    setShowAddModal(true);
+  };
+
+  const closeAddModal = () => {
+    setShowAddModal(false);
+  };
+
+  const handleNewUserChange = (field, value) => {
+    setNewUserForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleCreateUser = async () => {
+    try {
+      setCreating(true);
+      // Validación simple
+      if (!newUserForm.nombre || !newUserForm.email || !newUserForm.password) {
+        alert('Por favor completa nombre, email y contraseña');
+        setCreating(false);
+        return;
+      }
+      await createUser(newUserForm);
+      await fetchUsers(); // refrescar lista
+      closeAddModal();
+    } catch (err) {
+      console.error('Error creando usuario:', err);
+      alert(err.response?.data?.message || 'Error al crear usuario');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const { users, total, page, totalPages } = usersData;
 
   return (
@@ -185,6 +261,15 @@ const UsuariosAdmin = () => {
           <p className="text-sm text-gray-500">
             Gestiona planes, estados y estadísticas del sistema.
           </p>
+        </div>
+
+        <div>
+          <button
+            onClick={openAddModal}
+            className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md shadow hover:bg-emerald-700"
+          >
+            Agregar usuario
+          </button>
         </div>
       </div>
 
@@ -290,7 +375,7 @@ const UsuariosAdmin = () => {
                   Estado
                 </th>
                 <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">
-                  Diagn. mes
+                  Diagnost. / mes
                 </th>
                 <th className="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">
                   Acciones
@@ -329,38 +414,36 @@ const UsuariosAdmin = () => {
                     </td>
                     <td className="px-4 py-2">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                          user.tipoSuscripcion === 'pro'
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-emerald-100 text-emerald-800'
-                        }`}
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${user.tipoSuscripcion === 'pro'
+                          ? 'bg-purple-100 text-purple-800'
+                          : 'bg-emerald-100 text-emerald-800'
+                          }`}
                       >
                         {user.tipoSuscripcion === 'pro' ? 'Pro' : 'Free'}
                       </span>
                     </td>
                     <td className="px-4 py-2">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                          user.estadoSuscripcion === 'activa'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : user.estadoSuscripcion === 'suspendida'
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${user.estadoSuscripcion === 'activa'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : user.estadoSuscripcion === 'suspendida'
                             ? 'bg-yellow-100 text-yellow-800'
                             : 'bg-red-100 text-red-800'
-                        }`}
+                          }`}
                       >
                         {user.estadoSuscripcion}
                       </span>
                     </td>
                     <td className="px-4 py-2">
                       <div className="text-gray-900">
-                        {user.limites?.diagnosticosRealizados ?? 0} /{' '}
-                        {user.limites?.diagnosticosMes ?? '∞'}
+                        {user.limites?.diagnosticosRealizados ?? user.diagnosticosRealizados ?? 0} /{' '}
+                        {(user.limites?.diagnosticosMes == null || user.limites?.diagnosticosMes <= 0)
+                          ? '∞'
+                          : user.limites.diagnosticosMes}
                       </div>
                       <div className="text-xs text-gray-500">
                         {user.limites?.ultimoResetDiagnosticos
-                          ? new Date(
-                              user.limites.ultimoResetDiagnosticos
-                            ).toLocaleDateString('es-CL')
+                          ? new Date(user.limites.ultimoResetDiagnosticos).toLocaleDateString('es-CL')
                           : ''}
                       </div>
                     </td>
@@ -440,6 +523,17 @@ const UsuariosAdmin = () => {
           onClose={closeEditModal}
           onSave={handleSaveUser}
           saving={saving}
+        />
+      )}
+
+      {/* Modal crear usuario */}
+      {showAddModal && (
+        <AddUserModal
+          form={newUserForm}
+          onChange={handleNewUserChange}
+          onClose={closeAddModal}
+          onCreate={handleCreateUser}
+          creating={creating}
         />
       )}
 
@@ -548,6 +642,72 @@ const EditUserModal = ({ user, form, onChange, onClose, onSave, saving }) => {
             className="px-3 py-1.5 text-sm rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
           >
             {saving ? 'Guardando...' : 'Guardar cambios'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AddUserModal = ({ form, onChange, onClose, onCreate, creating }) => {
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-30">
+      <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-gray-800">Crear nuevo usuario</h2>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+            <input type="text" value={form.nombre} onChange={(e) => onChange('nombre', e.target.value)} className="w-full rounded-md border-gray-300 shadow-sm p-2 text-sm" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input type="email" value={form.email} onChange={(e) => onChange('email', e.target.value)} className="w-full rounded-md border-gray-300 shadow-sm p-2 text-sm" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+            <input type="password" value={form.password} onChange={(e) => onChange('password', e.target.value)} className="w-full rounded-md border-gray-300 shadow-sm p-2 text-sm" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Empresa (opcional)</label>
+            <input type="text" value={form.empresa} onChange={(e) => onChange('empresa', e.target.value)} className="w-full rounded-md border-gray-300 shadow-sm p-2 text-sm" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Plan</label>
+              <select value={form.tipoSuscripcion} onChange={(e) => onChange('tipoSuscripcion', e.target.value)} className="w-full rounded-md border-gray-300 shadow-sm p-2 text-sm">
+                <option value="free">Free</option>
+                <option value="pro">Pro</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+              <select value={form.estadoSuscripcion} onChange={(e) => onChange('estadoSuscripcion', e.target.value)} className="w-full rounded-md border-gray-300 shadow-sm p-2 text-sm">
+                <option value="activa">Activa</option>
+                <option value="suspendida">Suspendida</option>
+                <option value="cancelada">Cancelada</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
+            <select value={form.role} onChange={(e) => onChange('role', e.target.value)} className="w-full rounded-md border-gray-300 shadow-sm p-2 text-sm">
+              <option value="user">Usuario</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-2 pt-2">
+          <button type="button" onClick={onClose} className="px-3 py-1.5 text-sm rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50">Cancelar</button>
+          <button type="button" disabled={creating} onClick={onCreate} className="px-3 py-1.5 text-sm rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60">
+            {creating ? 'Creando...' : 'Crear usuario'}
           </button>
         </div>
       </div>

@@ -6,13 +6,15 @@ const {
   obtenerUsuario,
   actualizarUsuario,
   eliminarUsuario,
-  obtenerEstadisticasGenerales
+  obtenerEstadisticasGenerales,
+  crearUsuarioAdmin
 } = require('../controllers/adminController');
 
 // Todas las rutas requieren autenticación + rol admin
 router.use(protegerRuta, verificarAdmin);
 
 // Rutas de administración de usuarios
+router.post('/users', crearUsuarioAdmin);
 router.get('/users', listarUsuarios);
 router.get('/users/:id', obtenerUsuario);
 router.put('/users/:id', actualizarUsuario);
