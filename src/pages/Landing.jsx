@@ -24,27 +24,32 @@ export default function Landing() {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = (e) => {
-        e && e.preventDefault();
+    const handleSubmit = async (e) => {
+        e.preventDefault();
         setFormStatus('sending');
 
-        const subject = encodeURIComponent(`Solicitud de Demo - ${formData.empresa}`);
-        const body = encodeURIComponent(
-            `Nombre: ${formData.nombre}\n` +
-            `Email: ${formData.email}\n` +
-            `Empresa: ${formData.empresa}\n` +
-            `Teléfono: ${formData.telefono || 'No proporcionado'}\n\n` +
-            `Mensaje:\n${formData.mensaje || 'Sin mensaje adicional'}`
-        );
+        try {
+            const res = await fetch('/api/contacto', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData),
+            });
 
-        const mailtoLink = `mailto:ambientapp@mellamowalter.cl?subject=${subject}&body=${body}`;
-        window.location.href = mailtoLink;
+            const data = await res.json();
 
-        setTimeout(() => {
-            setFormStatus('success');
-            setFormData({ nombre: '', email: '', empresa: '', telefono: '', mensaje: '' });
-            setTimeout(() => setFormStatus(''), 4500);
-        }, 600);
+            if (data.success) {
+                setFormStatus('success');
+                setFormData({ nombre: '', email: '', empresa: '', telefono: '', mensaje: '' });
+            } else {
+                setFormStatus('error');
+                alert(data.message || 'Error enviando formulario');
+            }
+        } catch (error) {
+            setFormStatus('error');
+            alert('Error enviando formulario');
+        }
+
+        setTimeout(() => setFormStatus(''), 4500);
     };
 
     const features = [
@@ -290,12 +295,35 @@ export default function Landing() {
                                 ))}
                             </ul>
 
-                            <button
-                                className={`w-full py-3 rounded-lg font-bold transition ${plan.ctaColor}`}
-                                aria-label={`${plan.name} plan call to action`}
-                            >
-                                {plan.cta}
-                            </button>
+                            {/* CTA según plan */}
+                            {plan.key === 'free' ? (
+                                <button
+                                    type="button"
+                                    className={`w-full py-3 rounded-lg font-bold transition ${plan.ctaColor}`}
+                                    aria-label={`${plan.name} plan call to action`}
+                                    onClick={() => navigate('/registro')}
+                                >
+                                    {plan.cta}
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className={`w-full py-3 rounded-lg font-bold transition ${plan.ctaColor}`}
+                                    aria-label={`${plan.name} plan call to action`}
+                                    onClick={() => {
+                                        // Intentamos hacer scroll suave al elemento con id="demo"
+                                        const el = document.getElementById('demo');
+                                        if (el) {
+                                            el.scrollIntoView({ behavior: 'smooth' });
+                                        } else {
+                                            // Fallback: cambia el hash (útil si el usuario viene desde otra ruta)
+                                            window.location.hash = '#demo';
+                                        }
+                                    }}
+                                >
+                                    {plan.cta}
+                                </button>
+                            )}
 
                             <p className="mt-6 text-center italic text-gray-700">{plan.footerText}</p>
                         </div>
@@ -353,7 +381,7 @@ export default function Landing() {
 
                             {formStatus === 'success' && (
                                 <div className="bg-green-100 border-l-4 border-green-600 p-4 rounded">
-                                    <p className="text-green-800 font-semibold">¡Gracias! Tu cliente de correo se abrirá para enviar la solicitud.</p>
+                                    <p className="text-green-800 font-semibold">¡Gracias! Nos contactaremos con usted a la brevedad.</p>
                                 </div>
                             )}
                         </form>

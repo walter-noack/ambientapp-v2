@@ -1,4 +1,3 @@
-// src/services/adminApi.js
 import api from './api';
 
 /**
@@ -55,11 +54,11 @@ export const getUsers = async (filters = {}) => {
   if (filters.estado) params.estado = filters.estado;
   if (filters.sortBy) params.sortBy = filters.sortBy;
   if (filters.sortOrder) params.sortOrder = filters.sortOrder;
+  if (filters.verified) params.verified = filters.verified; // Añadido para filtro verificación
 
   const response = await api.get('/admin/users', { params });
   return normalizeListResponse(response);
 };
-
 
 export const getUserById = async (id) => {
   const response = await api.get(`/admin/users/${id}`);
@@ -76,7 +75,7 @@ export const createUser = async (data) => {
 };
 
 export const updateUser = async (id, data) => {
-  // data puede incluir: { tipoSuscripcion, estadoSuscripcion, role, limites, features, notas }
+  // data puede incluir: { tipoSuscripcion, estadoSuscripcion, role, limites, features, notas, isVerified }
   const response = await api.put(`/admin/users/${id}`, data);
   // backend devuelve { success: true, data: { usuario: ... } }
   const payload = response?.data?.data ?? response?.data ?? response;
@@ -93,7 +92,7 @@ export const getAdminStats = async () => {
   const response = await api.get('/admin/stats');
   // backend devuelve { success: true, data: { usuarios: {...}, diagnosticos: {...} } }
   const payload = response?.data?.data ?? response?.data ?? response;
-  // Para tu componente, es útil devolver un objeto plano con campos ya nombrados:
+
   return {
     totalUsuarios: payload?.usuarios?.total ?? null,
     totalFree: payload?.usuarios?.free ?? null,
@@ -104,4 +103,9 @@ export const getAdminStats = async () => {
     diagnosticosUltimoMes: payload?.diagnosticos?.ultimoMes ?? null,
     promedioDiagnosticosPorUsuario: payload?.diagnosticos?.promedioPorUsuario ?? null,
   };
+};
+
+export const resendVerificationEmail = async (userId) => {
+  const response = await api.post(`/admin/users/${userId}/resend-verification`);
+  return response.data;
 };

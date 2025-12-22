@@ -1,8 +1,21 @@
+// controllers/adminController.js
 const User = require('../models/User');
 const Diagnostico = require('../models/Diagnostico');
-const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
-// Nueva función: crear usuario (admin)
+// Configura tu transporte SMTP (ajusta según tu configuración)
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'mail.ambientapp.cl',
+  port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 465,
+  secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : true,
+  auth: {
+    user: process.env.SMTP_USER || 'hola@ambientapp.cl',
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+// ----- crearUsuarioAdmin -----
 const crearUsuarioAdmin = async (req, res) => {
   try {
     const {
@@ -34,14 +47,11 @@ const crearUsuarioAdmin = async (req, res) => {
       });
     }
 
-    // Hashear password
-    const salt = await bcrypt.genSalt(10);
-    const hashed = await bcrypt.hash(password, salt);
-
+    // No hacer hash manual aquí: el pre('save') del modelo se encarga.
     const nuevoUsuario = await User.create({
       nombre,
       email,
-      password: hashed,
+      password, // en claro: el schema lo hashea en pre('save')
       empresa,
       rut,
       telefono,
@@ -63,7 +73,8 @@ const crearUsuarioAdmin = async (req, res) => {
         usuario: {
           ...nuevoUsuario.toObject(),
           password: undefined,
-          planInfo: nuevoUsuario.planInfo
+          planInfo: nuevoUsuario.planInfo,
+          isVerified: nuevoUsuario.emailVerificado // exponer compatibilidad
         }
       }
     });
@@ -77,12 +88,22 @@ const crearUsuarioAdmin = async (req, res) => {
   }
 };
 
-// @desc    Listar todos los usuarios (con filtros)
-// @route   GET /api/admin/users
-// @access  Private/Admin
+// ----- listarUsuarios -----
 const listarUsuarios = async (req, res) => {
   try {
-    const { plan, estado, busqueda, ordenar = 'reciente', page = 1, limit = 20 } = req.query;
+    // aceptar 'busqueda' (es) o 'search' (en)
+    const {
+      plan,
+      estado,
+      busqueda,
+      search,
+      ordenar = 'reciente',
+      page = 1,
+      limit = 20,
+      verified
+    } = req.query;
+
+    const terminoBusqueda = busqueda || search;
 
     // Construir filtro
     let filtro = {};
@@ -95,15 +116,21 @@ const listarUsuarios = async (req, res) => {
       filtro.estadoSuscripcion = estado;
     }
 
-    if (busqueda) {
+    // expected: 'verificados' | 'no_verificados' | 'todos'
+    if (typeof verified !== 'undefined' && verified !== 'todos') {
+      if (verified === 'verificados') filtro.emailVerificado = true;
+      if (verified === 'no_verificados') filtro.emailVerificado = false;
+    }
+
+    if (terminoBusqueda) {
       filtro.$or = [
-        { nombre: { $regex: busqueda, $options: 'i' } },
-        { email: { $regex: busqueda, $options: 'i' } },
-        { empresa: { $regex: busqueda, $options: 'i' } }
+        { nombre: { $regex: terminoBusqueda, $options: 'i' } },
+        { email: { $regex: terminoBusqueda, $options: 'i' } },
+        { empresa: { $regex: terminoBusqueda, $options: 'i' } }
       ];
     }
 
-    // Configurar ordenamiento
+    // Orden
     let sort = {};
     switch (ordenar) {
       case 'reciente':
@@ -132,17 +159,17 @@ const listarUsuarios = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
 
-    // Contar total
     const total = await User.countDocuments(filtro);
 
-    // Agregar estadísticas por usuario
+    // Agregar estadísticas por usuario y mapear emailVerificado => isVerified
     const usuariosConStats = await Promise.all(
       usuarios.map(async (user) => {
         const diagnosticosCount = await Diagnostico.countDocuments({ usuario: user._id });
-        return {
-          ...user.toObject(),
-          diagnosticosRealizados: diagnosticosCount
-        };
+        const uObj = user.toObject();
+        uObj.diagnosticosRealizados = diagnosticosCount;
+        // garantizar compatibilidad con frontend que espera isVerified
+        uObj.isVerified = !!uObj.emailVerificado;
+        return uObj;
       })
     );
 
@@ -169,9 +196,7 @@ const listarUsuarios = async (req, res) => {
   }
 };
 
-// @desc    Obtener detalles de un usuario
-// @route   GET /api/admin/users/:id
-// @access  Private/Admin
+// ----- obtenerUsuario -----
 const obtenerUsuario = async (req, res) => {
   try {
     const { id } = req.params;
@@ -185,7 +210,6 @@ const obtenerUsuario = async (req, res) => {
       });
     }
 
-    // Obtener diagnósticos del usuario
     const diagnosticos = await Diagnostico.find({ usuario: id })
       .select('companyName puntuacionGeneral nivelDesempeno createdAt')
       .sort({ createdAt: -1 })
@@ -198,7 +222,8 @@ const obtenerUsuario = async (req, res) => {
       data: {
         usuario: {
           ...usuario.toObject(),
-          planInfo: usuario.getInfoPlan()
+          planInfo: usuario.getInfoPlan(),
+          isVerified: !!usuario.emailVerificado
         },
         diagnosticos,
         diagnosticosCount
@@ -215,10 +240,11 @@ const obtenerUsuario = async (req, res) => {
   }
 };
 
+// ----- actualizarUsuario -----
 const actualizarUsuario = async (req, res) => {
   try {
     const { id } = req.params;
-    const { tipoSuscripcion, estadoSuscripcion, limites, features, notas, role } = req.body;
+    const { tipoSuscripcion, estadoSuscripcion, limites, features, notas, role, isVerified } = req.body;
 
     const usuario = await User.findById(id);
 
@@ -233,7 +259,6 @@ const actualizarUsuario = async (req, res) => {
       usuario.role = role;
     }
 
-    // Actualizar campos permitidos
     if (tipoSuscripcion) {
       if (tipoSuscripcion === 'pro' && usuario.tipoSuscripcion !== 'pro') {
         // Upgrade a Pro
@@ -265,6 +290,16 @@ const actualizarUsuario = async (req, res) => {
       usuario.features = { ...usuario.features, ...features };
     }
 
+    // Manejar verificación (mapear isVerified => emailVerificado)
+    if (typeof isVerified !== 'undefined') {
+      usuario.emailVerificado = !!isVerified;
+      if (!usuario.emailVerificado) {
+        // si se desverifica, también limpiar token
+        usuario.verificationToken = undefined;
+        usuario.verificationTokenExpires = undefined;
+      }
+    }
+
     await usuario.save();
 
     res.status(200).json({
@@ -273,7 +308,8 @@ const actualizarUsuario = async (req, res) => {
       data: {
         usuario: {
           ...usuario.toObject(),
-          planInfo: usuario.getInfoPlan()
+          planInfo: usuario.getInfoPlan(),
+          isVerified: !!usuario.emailVerificado
         }
       }
     });
@@ -288,9 +324,7 @@ const actualizarUsuario = async (req, res) => {
   }
 };
 
-// @desc    Eliminar usuario (y sus diagnósticos)
-// @route   DELETE /api/admin/users/:id
-// @access  Private/Admin
+// ----- eliminarUsuario -----
 const eliminarUsuario = async (req, res) => {
   try {
     const { id } = req.params;
@@ -304,10 +338,7 @@ const eliminarUsuario = async (req, res) => {
       });
     }
 
-    // Eliminar todos los diagnósticos del usuario
     await Diagnostico.deleteMany({ usuario: id });
-
-    // Eliminar usuario
     await User.findByIdAndDelete(id);
 
     res.status(200).json({
@@ -325,29 +356,23 @@ const eliminarUsuario = async (req, res) => {
   }
 };
 
-// @desc    Obtener estadísticas generales del sistema
-// @route   GET /api/admin/stats
-// @access  Private/Admin
+// ----- obtenerEstadisticasGenerales -----
 const obtenerEstadisticasGenerales = async (req, res) => {
   try {
-    // Usuarios
     const totalUsuarios = await User.countDocuments();
     const usuariosFree = await User.countDocuments({ tipoSuscripcion: 'free' });
     const usuariosPro = await User.countDocuments({ tipoSuscripcion: 'pro' });
     const usuariosActivos = await User.countDocuments({ estadoSuscripcion: 'activa' });
 
-    // Diagnósticos
     const totalDiagnosticos = await Diagnostico.countDocuments();
     const diagnosticosUltimoMes = await Diagnostico.countDocuments({
       createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
     });
 
-    // Usuarios nuevos último mes
     const usuariosNuevos = await User.countDocuments({
       createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
     });
 
-    // Promedio de diagnósticos por usuario
     const promedioDiagnosticosPorUsuario = totalUsuarios > 0
       ? (totalDiagnosticos / totalUsuarios).toFixed(2)
       : 0;
@@ -380,11 +405,54 @@ const obtenerEstadisticasGenerales = async (req, res) => {
   }
 };
 
+// ----- reenviarEmailVerificacion -----
+const reenviarEmailVerificacion = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const usuario = await User.findById(id);
+
+    if (!usuario) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    if (usuario.emailVerificado) {
+      return res.status(400).json({ success: false, message: 'Usuario ya está verificado' });
+    }
+
+    // Generar token nuevo usando el método del modelo si existe
+    let token = usuario.generarTokenVerificacion ? usuario.generarTokenVerificacion(24) : crypto.randomBytes(32).toString('hex');
+    // Si el método generó token pero no guardó, guardarlo ahora
+    usuario.verificationToken = token;
+    usuario.verificationTokenExpires = Date.now() + 24 * 60 * 60 * 1000; // 24h
+    await usuario.save();
+
+    // Construir link de verificación (ajusta URL frontend)
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+
+    // Enviar email
+    const mailOptions = {
+      from: `"AmbientApp" <${process.env.SMTP_FROM || 'hola@ambientapp.cl'}>`,
+      to: usuario.email,
+      subject: 'Verifica tu correo en AmbientApp',
+      text: `Hola ${usuario.nombre},\n\nPor favor verifica tu correo haciendo clic en el siguiente enlace:\n\n${verificationUrl}\n\nEste enlace expira en 24 horas.\n\nGracias!`,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.json({ success: true, message: 'Email de verificación reenviado' });
+  } catch (error) {
+    console.error('Error reenviando email de verificación:', error);
+    res.status(500).json({ success: false, message: 'Error enviando email de verificación' });
+  }
+};
+
 module.exports = {
   listarUsuarios,
   obtenerUsuario,
   actualizarUsuario,
   eliminarUsuario,
   obtenerEstadisticasGenerales,
-  crearUsuarioAdmin
+  crearUsuarioAdmin,
+  reenviarEmailVerificacion
 };

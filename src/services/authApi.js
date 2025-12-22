@@ -15,3 +15,8 @@ export const registrarUsuario = async (payload) => {
   const res = await api.post('/auth/registro', payload);
   return res.data; // debería ser { success, data: { user, token }, ... }
 };
+
+export const resendVerification = (payload) => {
+  // payload puede ser { email } o { userId } según lo implementado en backend
+  return api.post('/auth/resend-verification', payload);
+};

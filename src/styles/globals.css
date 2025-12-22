@@ -131,3 +131,7 @@ body {
   font-size: 0.75rem;
   line-height: 1.5;
 }
+
+.email-verification-banner {
+  margin-bottom: 1rem; /* o el espacio que prefieras */
+}

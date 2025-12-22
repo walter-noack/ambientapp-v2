@@ -4,6 +4,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const morgan = require('morgan'); // opcional, para logs más limpios
+const contactRoutes = require('./src/routes/contact');
 
 // Inicializar app
 const app = express();
@@ -12,6 +13,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json()); // para parsear JSON
+
 
 // Middleware de logging
 if (process.env.NODE_ENV !== 'production') {
@@ -54,6 +57,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/diagnosticos', diagnosticoRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/contacto', contactRoutes);
 
 // Manejo de errores global
 app.use((err, req, res, next) => {

@@ -6,7 +6,9 @@ const {
   login,
   obtenerPerfil,
   obtenerUsuarioActual,
-  actualizarPerfil
+  actualizarPerfil,
+  verifyEmail,
+  resendVerification
 } = require('../controllers/authController');
 
 const { protegerRuta } = require('../middleware/auth');
@@ -14,6 +16,13 @@ const { protegerRuta } = require('../middleware/auth');
 // Rutas públicas
 router.post('/registro', registro);
 router.post('/login', login);
+
+// Verificación de email (POST y GET para soporte de link directo)
+router.post('/verify-email', verifyEmail);
+router.get('/verify-email', verifyEmail);
+
+// Reenvío de verificación (publico para "Olvidé verificar" / formulario)
+router.post('/resend-verification', resendVerification);
 
 // Rutas protegidas
 router.get('/me', protegerRuta, obtenerUsuarioActual);

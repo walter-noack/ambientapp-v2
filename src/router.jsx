@@ -17,6 +17,7 @@ import AcercaDe from './pages/AcercaDe';
 import Landing from './pages/Landing';
 import Documentation from './pages/Documentation';
 import Soporte from './pages/Soporte';
+import VerifyEmail from './pages/VerifyEmail';
 
 import UsuariosAdmin from './pages/Admin/UsuariosAdmin';
 import Perfil from './pages/Perfil';
@@ -143,6 +144,9 @@ export default function AppRouter() {
 
         {/* Upgrade */}
         <Route path="upgrade" element={<Upgrade />} />
+
+        {/* Verificación de correos */}
+        <Route path="verify-email" element={<VerifyEmail />} />
 
         {/* Administración (solo admins) */}
         <Route

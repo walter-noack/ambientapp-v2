@@ -1,4 +1,5 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
+import EmailVerificationBanner from "../EmailVerificationBanner";
 import { useAuth } from '../../context/AuthContext';
 import { LogOut, LayoutDashboard, FileText, Info, Users, User } from 'lucide-react';
 
@@ -17,11 +18,10 @@ export default function MainLayout() {
   };
 
   const navLinkClass = (path) => {
-    return `flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-      isActive(path)
-        ? 'bg-primary-500 text-white'
-        : 'text-slate-700 hover:bg-slate-100'
-    }`;
+    return `flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${isActive(path)
+      ? 'bg-primary-500 text-white'
+      : 'text-slate-700 hover:bg-slate-100'
+      }`;
   };
 
   return (
@@ -71,6 +71,7 @@ export default function MainLayout() {
               )}
             </div>
 
+
             {/* User Menu */}
             <div className="flex items-center gap-3">
               {/* Enlace al perfil */}
@@ -114,11 +115,16 @@ export default function MainLayout() {
             </div>
           </div>
         </div>
+
       </nav>
+
 
       {/* MAIN CONTENT */}
       <main className="flex-1">
+        {/* BANNER DE VERIFICACIÓN */}
+        <EmailVerificationBanner />
         <Outlet />
+
       </main>
 
       {/* FOOTER */}

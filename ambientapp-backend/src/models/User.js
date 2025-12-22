@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema({
   // Información básica
@@ -22,7 +23,7 @@ const userSchema = new mongoose.Schema({
     minlength: [6, 'La contraseña debe tener al menos 6 caracteres'],
     select: false
   },
-  
+
   // Información de la empresa/consultoría
   empresa: {
     type: String,
@@ -36,21 +37,21 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  
+
   // Tipo de suscripción (solo Free o Pro)
   tipoSuscripcion: {
     type: String,
     enum: ['free', 'pro'],
     default: 'free'
   },
-  
+
   // Estado de la suscripción
   estadoSuscripcion: {
     type: String,
     enum: ['activa', 'suspendida', 'cancelada'],
     default: 'activa'
   },
-  
+
   // Fechas de suscripción
   fechaInicioSuscripcion: {
     type: Date,
@@ -60,7 +61,7 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
-  
+
   // Límites según plan
   limites: {
     diagnosticosMes: {
@@ -84,7 +85,7 @@ const userSchema = new mongoose.Schema({
       default: 1
     }
   },
-  
+
   // Features habilitadas según plan
   features: {
     exportarPDF: {
@@ -104,7 +105,7 @@ const userSchema = new mongoose.Schema({
       default: false
     }
   },
-  
+
   // Cuenta principal (para sistema multiusuario Pro)
   esCuentaPrincipal: {
     type: Boolean,
@@ -115,20 +116,29 @@ const userSchema = new mongoose.Schema({
     ref: 'User',
     default: null
   },
-  
+
   // Rol (para futuro admin panel)
   role: {
     type: String,
     enum: ['user', 'admin'],
     default: 'user'
   },
-  
+
   // Verificación de email
   emailVerificado: {
     type: Boolean,
     default: false
   },
-  
+  // Token de verificación y expiración
+  verificationToken: {
+    type: String,
+    default: null
+  },
+  verificationTokenExpires: {
+    type: Date,
+    default: null
+  },
+
   // Metadata
   ultimoAcceso: {
     type: Date,
@@ -146,7 +156,7 @@ userSchema.pre('save', async function() {
   if (!this.isModified('password')) {
     return;
   }
-  
+
   // Encriptar password
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
@@ -157,19 +167,33 @@ userSchema.methods.compararPassword = function(passwordIngresado) {
   return bcrypt.compare(passwordIngresado, this.password);
 };
 
+// Método: Generar token de verificación y setear expiración (24h por defecto)
+userSchema.methods.generarTokenVerificacion = function(ttlHoras = 24) {
+  const token = crypto.randomBytes(32).toString('hex');
+  this.verificationToken = token;
+  this.verificationTokenExpires = Date.now() + ttlHoras * 60 * 60 * 1000;
+  return token;
+};
+
+// Método: Limpiar token verificación (al verificar)
+userSchema.methods.clearVerificationToken = function() {
+  this.verificationToken = undefined;
+  this.verificationTokenExpires = undefined;
+};
+
 // Método: Verificar y resetear límites mensuales si es necesario
 userSchema.methods.verificarYResetearLimites = function() {
   if (this.tipoSuscripcion === 'pro') {
     return; // Pro no tiene límites
   }
-  
+
   const ahora = new Date();
   const ultimoReset = new Date(this.limites.ultimoResetDiagnosticos);
-  
+
   // Verificar si pasó un mes desde el último reset
   const unMesDespues = new Date(ultimoReset);
   unMesDespues.setMonth(unMesDespues.getMonth() + 1);
-  
+
   if (ahora >= unMesDespues) {
     this.limites.diagnosticosRealizados = 0;
     this.limites.ultimoResetDiagnosticos = ahora;
@@ -182,10 +206,10 @@ userSchema.methods.puedeHacerDiagnostico = function() {
   if (this.tipoSuscripcion === 'pro') {
     return true;
   }
-  
+
   // Verificar y resetear límites si es necesario
   this.verificarYResetearLimites();
-  
+
   // Si es Free, verificar límite mensual
   return this.limites.diagnosticosRealizados < this.limites.diagnosticosMes;
 };
@@ -195,10 +219,10 @@ userSchema.methods.registrarDiagnostico = async function() {
   if (this.tipoSuscripcion === 'pro') {
     return; // Pro no consume
   }
-  
+
   // Verificar y resetear límites si es necesario
   this.verificarYResetearLimites();
-  
+
   // Incrementar contador
   this.limites.diagnosticosRealizados += 1;
   await this.save();
@@ -208,7 +232,7 @@ userSchema.methods.registrarDiagnostico = async function() {
 userSchema.virtual('planInfo').get(function() {
   // Verificar y resetear límites antes de devolver info
   this.verificarYResetearLimites();
-  
+
   if (this.tipoSuscripcion === 'pro') {
     return {
       plan: 'Pro',
@@ -227,12 +251,12 @@ userSchema.virtual('planInfo').get(function() {
       features: this.features
     };
   }
-  
+
   const diagnosticosRestantes = Math.max(
     0,
     this.limites.diagnosticosMes - this.limites.diagnosticosRealizados
   );
-  
+
   return {
     plan: 'Free',
     diagnosticosTotales: this.limites.diagnosticosMes,
@@ -266,5 +290,16 @@ userSchema.methods.actualizarAPro = function() {
   this.features.soportePrioritario = true;
   return this.save();
 };
+
+// Alias para compatibilidad con frontend / controllers que usan isVerified
+userSchema.virtual('isVerified')
+  .get(function() {
+    return !!this.emailVerificado;
+  })
+  .set(function(value) {
+    this.emailVerificado = !!value;
+  });
+
+
 
 module.exports = mongoose.model('User', userSchema);

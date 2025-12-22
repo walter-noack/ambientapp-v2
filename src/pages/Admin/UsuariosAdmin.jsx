@@ -5,7 +5,8 @@ import {
   deleteUser,
   updateUser,
   getAdminStats,
-  createUser
+  createUser,
+  resendVerificationEmail, // función para reenviar email de verificación
 } from '../../services/adminApi';
 
 const INITIAL_FILTERS = {
@@ -27,6 +28,10 @@ const UsuariosAdmin = () => {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
+  const [filterVerified, setFilterVerified] = useState('todos');
+
+  // para trackear acciones por fila (toggle / resend)
+  const [actionLoading, setActionLoading] = useState({});
 
   // Modal edición
   const [selectedUser, setSelectedUser] = useState(null);
@@ -68,18 +73,20 @@ const UsuariosAdmin = () => {
       if (filters.search) apiFilters.search = filters.search;
       if (filters.plan !== 'all') apiFilters.plan = filters.plan;
       if (filters.estado !== 'all') apiFilters.estado = filters.estado;
+      // incluir filtro de verificación solo si no es "todos"
+      if (filterVerified && filterVerified !== 'todos') {
+        apiFilters.verified = filterVerified; // 'verificados' | 'no_verificados'
+      }
 
       // Llamada a la API
       const response = await getUsers(apiFilters);
 
       // Normalizar distintos formatos posibles de respuesta
-      // Soporta tanto la forma ya normalizada por adminApi asímismo la forma raw
       const payload =
         response?.data?.data || // axios full response with { data: { data: ... } }
         response?.data ||      // axios response with { data: ... }
         response || {};        // direct return
 
-      // obtener usuarios y paginación con fallback
       const usuarios = payload.usuarios || payload.users || response?.users || [];
       const pagination =
         payload.pagination ||
@@ -114,14 +121,13 @@ const UsuariosAdmin = () => {
       setStats(data);
     } catch (err) {
       console.error(err);
-      // No bloqueo la página por error de stats
     }
   };
 
   useEffect(() => {
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.page, filters.plan, filters.estado]); // búsqueda la ejecutamos por submit
+  }, [filters.page, filters.plan, filters.estado, filterVerified]); // <- incluir filterVerified
 
   useEffect(() => {
     fetchStats();
@@ -248,6 +254,32 @@ const UsuariosAdmin = () => {
     }
   };
 
+  const toggleVerification = async (userId, currentValue) => {
+    setActionLoading((prev) => ({ ...prev, [userId]: true }));
+    try {
+      await updateUser(userId, { isVerified: !currentValue });
+      await fetchUsers();
+    } catch (err) {
+      console.error('Error toggling verification', err);
+      alert(err.response?.data?.message || 'Error al actualizar verificación');
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [userId]: false }));
+    }
+  };
+
+  const handleResendVerification = async (userId) => {
+    setActionLoading((prev) => ({ ...prev, [userId]: true }));
+    try {
+      await resendVerificationEmail(userId);
+      alert('Email de verificación reenviado correctamente');
+    } catch (err) {
+      console.error('Error reenviando verificación', err);
+      alert(err.response?.data?.message || 'Error al reenviar email de verificación');
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [userId]: false }));
+    }
+  };
+
   const { users, total, page, totalPages } = usersData;
 
   return (
@@ -329,6 +361,19 @@ const UsuariosAdmin = () => {
             </select>
           </div>
 
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-gray-700">Verificación</label>
+            <select
+              value={filterVerified}
+              onChange={(e) => setFilterVerified(e.target.value)}
+              className="px-3 py-2 border rounded w-full max-w-xs"
+            >
+              <option value="todos">Todos</option>
+              <option value="verificados">Verificados</option>
+              <option value="no_verificados">No verificados</option>
+            </select>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Estado
@@ -375,6 +420,9 @@ const UsuariosAdmin = () => {
                   Estado
                 </th>
                 <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">
+                  Verificado
+                </th>
+                <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">
                   Diagnost. / mes
                 </th>
                 <th className="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">
@@ -385,13 +433,13 @@ const UsuariosAdmin = () => {
             <tbody className="bg-white divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
                     Cargando usuarios...
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
                     No se encontraron usuarios con los filtros actuales.
                   </td>
                 </tr>
@@ -434,6 +482,41 @@ const UsuariosAdmin = () => {
                         {user.estadoSuscripcion}
                       </span>
                     </td>
+
+                    {/* Columna Verificado + acciones relacionadas */}
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        {user.isVerified ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                            Verificado
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                            No verificado
+                          </span>
+                        )}
+
+                        <button
+                          onClick={() => toggleVerification(user._id, !!user.isVerified)}
+                          disabled={!!actionLoading[user._id]}
+                          className="text-xs text-gray-600 hover:text-gray-800 ml-1"
+                        >
+                          {actionLoading[user._id] ? '...' : (user.isVerified ? 'Desverificar' : 'Verificar')}
+                        </button>
+                      </div>
+                      {!user.isVerified && (
+                        <div className="mt-1">
+                          <button
+                            onClick={() => handleResendVerification(user._id)}
+                            disabled={!!actionLoading[user._id]}
+                            className="text-xs text-blue-600 hover:text-blue-800"
+                          >
+                            {actionLoading[user._id] ? 'Enviando...' : 'Reenviar email'}
+                          </button>
+                        </div>
+                      )}
+                    </td>
+
                     <td className="px-4 py-2">
                       <div className="text-gray-900">
                         {user.limites?.diagnosticosRealizados ?? user.diagnosticosRealizados ?? 0} /{' '}
