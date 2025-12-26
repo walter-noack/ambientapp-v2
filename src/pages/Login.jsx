@@ -83,36 +83,45 @@ export default function Login() {
             />
 
             {/* Password */}
-            <Input
-              label="Contraseña"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-            />
-            
-
-                {/* ...campos... */}
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  className="w-full"
-                  disabled={loading}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-slate-700">
+                  Contraseña
+                </label>
+                <a
+                  href="/forgot-password"
+                  className="text-xs text-primary-600 hover:text-primary-700 font-medium"
                 >
-                  {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
-                </Button>
+                  ¿Olvidaste tu contraseña?
+                </a>
+              </div>
+              <Input
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+            </div>
 
-                <div className="text-center text-xs text-slate-500 mt-2">
-                  ¿No tienes cuenta?{' '}
-                  <a
-                    href="/registro"
-                    className="text-primary-600 hover:text-primary-700 font-medium"
-                  >
-                    Crea una cuenta gratis
-                  </a>
-                </div>
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
+            </Button>
+
+            <div className="text-center text-xs text-slate-500 mt-2">
+              ¿No tienes cuenta?{' '}
+              <a
+                href="/registro"
+                className="text-primary-600 hover:text-primary-700 font-medium"
+              >
+                Crea una cuenta gratis
+              </a>
+            </div>
 
             
           </form>

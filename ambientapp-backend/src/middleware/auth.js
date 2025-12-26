@@ -38,15 +38,27 @@ const protegerRuta = async (req, res, next) => {
       });
     }
     
-    // 4. Verificar que la suscripción esté activa
+    // 4. Verificar validez temporal del usuario
+    const validez = user.verificarValidezTemporal();
+    if (!validez.valido) {
+      await user.save(); // Guardar estado expirado
+      return res.status(403).json({
+        success: false,
+        message: validez.mensaje || 'Tu cuenta ha expirado',
+        code: 'CUENTA_EXPIRADA',
+        diasRestantes: 0
+      });
+    }
+
+    // 5. Verificar que la suscripción esté activa
     if (user.estadoSuscripcion !== 'activa') {
       return res.status(403).json({
         success: false,
         message: 'Suscripción suspendida o cancelada'
       });
     }
-    
-    // 5. Agregar usuario al request
+
+    // 6. Agregar usuario al request
     req.user = user;
     next();
     

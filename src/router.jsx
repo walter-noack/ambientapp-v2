@@ -22,6 +22,8 @@ import VerifyEmail from './pages/VerifyEmail';
 import UsuariosAdmin from './pages/Admin/UsuariosAdmin';
 import Perfil from './pages/Perfil';
 import Upgrade from './pages/Upgrade';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -109,6 +111,22 @@ export default function AppRouter() {
         element={
           <PublicRoute>
             <Registro />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <PublicRoute>
+            <ForgotPassword />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <PublicRoute>
+            <ResetPassword />
           </PublicRoute>
         }
       />

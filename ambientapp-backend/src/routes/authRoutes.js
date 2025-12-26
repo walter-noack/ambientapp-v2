@@ -8,7 +8,9 @@ const {
   obtenerUsuarioActual,
   actualizarPerfil,
   verifyEmail,
-  resendVerification
+  resendVerification,
+  forgotPassword,
+  resetPassword
 } = require('../controllers/authController');
 
 const { protegerRuta } = require('../middleware/auth');
@@ -23,6 +25,10 @@ router.get('/verify-email', verifyEmail);
 
 // Reenvío de verificación (publico para "Olvidé verificar" / formulario)
 router.post('/resend-verification', resendVerification);
+
+// Recuperación de contraseña
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 
 // Rutas protegidas
 router.get('/me', protegerRuta, obtenerUsuarioActual);

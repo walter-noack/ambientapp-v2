@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProfile } from '../services/authApi';
 import { useAuth } from '../context/AuthContext';
-import { Crown, Info, Sparkles } from 'lucide-react';
+import { Crown, Info, Sparkles, Clock, AlertCircle } from 'lucide-react';
 
 export default function Perfil() {
     const navigate = useNavigate();
@@ -12,6 +12,7 @@ export default function Perfil() {
     const [profile, setProfile] = useState(authUser || null);
     const [loading, setLoading] = useState(!authUser);
     const [error, setError] = useState(null);
+    const [diasRestantes, setDiasRestantes] = useState(null);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -36,6 +37,31 @@ export default function Perfil() {
             fetchProfile();
         }
     }, [authUser, setAuthUser]);
+
+    // Efecto para calcular días restantes en tiempo real
+    useEffect(() => {
+        const calcularDiasRestantes = () => {
+            if (!profile?.validezTemporal?.fechaExpiracion) {
+                setDiasRestantes(null);
+                return;
+            }
+
+            const ahora = new Date();
+            const fechaExpiracion = new Date(profile.validezTemporal.fechaExpiracion);
+            const diferenciaMilisegundos = fechaExpiracion - ahora;
+            const dias = Math.ceil(diferenciaMilisegundos / (1000 * 60 * 60 * 24));
+
+            setDiasRestantes(Math.max(0, dias));
+        };
+
+        // Calcular inmediatamente
+        calcularDiasRestantes();
+
+        // Actualizar cada hora
+        const intervalo = setInterval(calcularDiasRestantes, 1000 * 60 * 60);
+
+        return () => clearInterval(intervalo);
+    }, [profile?.validezTemporal?.fechaExpiracion]);
 
     // Debug: ver qué trae profile
     console.log('Perfil.jsx - profile:', profile);
@@ -70,6 +96,7 @@ export default function Perfil() {
         planInfo = {},
         features = {},
         limites = {}, // mantener por si acaso para usuarios
+        validezTemporal = {},
     } = profile;
 
     // Usar planInfo (viene del backend como virtual)
@@ -122,27 +149,72 @@ export default function Perfil() {
                     </p>
                 </div>
 
-                {/* Card plan actual compacta */}
-                <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isPro ? 'bg-purple-100' : 'bg-emerald-100'
-                        }`}>
-                        {isPro ? (
-                            <Crown className="w-5 h-5 text-purple-600" />
-                        ) : (
-                            <Sparkles className="w-5 h-5 text-emerald-600" />
-                        )}
+                <div className="flex flex-col sm:flex-row gap-3">
+                    {/* Card plan actual compacta */}
+                    <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isPro ? 'bg-purple-100' : 'bg-emerald-100'
+                            }`}>
+                            {isPro ? (
+                                <Crown className="w-5 h-5 text-purple-600" />
+                            ) : (
+                                <Sparkles className="w-5 h-5 text-emerald-600" />
+                            )}
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-xs uppercase tracking-wide text-slate-500">
+                                Plan actual
+                            </span>
+                            <span className="text-sm font-semibold text-slate-900">
+                                {isPro ? 'Plan Pro' : 'Plan Free'}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                                Estado: {estadoSuscripcion || '—'}
+                            </span>
+                        </div>
                     </div>
-                    <div className="flex flex-col">
-                        <span className="text-xs uppercase tracking-wide text-slate-500">
-                            Plan actual
-                        </span>
-                        <span className="text-sm font-semibold text-slate-900">
-                            {isPro ? 'Plan Pro' : 'Plan Free'}
-                        </span>
-                        <span className="text-xs text-slate-500">
-                            Estado: {estadoSuscripcion || '—'}
-                        </span>
-                    </div>
+
+                    {/* Contador de días restantes */}
+                    {validezTemporal?.tipo && validezTemporal.tipo !== 'ilimitado' && diasRestantes !== null && (
+                        <div className={`flex items-center gap-3 border rounded-xl px-4 py-3 shadow-sm ${diasRestantes <= 3
+                                ? 'bg-red-50 border-red-200'
+                                : diasRestantes <= 7
+                                    ? 'bg-amber-50 border-amber-200'
+                                    : 'bg-blue-50 border-blue-200'
+                            }`}>
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${diasRestantes <= 3
+                                    ? 'bg-red-100'
+                                    : diasRestantes <= 7
+                                        ? 'bg-amber-100'
+                                        : 'bg-blue-100'
+                                }`}>
+                                {diasRestantes <= 3 ? (
+                                    <AlertCircle className={`w-5 h-5 ${diasRestantes <= 3 ? 'text-red-600' : 'text-amber-600'}`} />
+                                ) : (
+                                    <Clock className="w-5 h-5 text-blue-600" />
+                                )}
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-xs uppercase tracking-wide text-slate-500">
+                                    Validez de cuenta
+                                </span>
+                                <span className={`text-sm font-semibold ${diasRestantes <= 3
+                                        ? 'text-red-700'
+                                        : diasRestantes <= 7
+                                            ? 'text-amber-700'
+                                            : 'text-blue-700'
+                                    }`}>
+                                    {diasRestantes === 0
+                                        ? 'Expirada'
+                                        : `${diasRestantes} ${diasRestantes === 1 ? 'día' : 'días'} restantes`}
+                                </span>
+                                <span className="text-xs text-slate-500">
+                                    Plan: {validezTemporal.tipo === '7dias' ? '7 días' :
+                                        validezTemporal.tipo === '15dias' ? '15 días' :
+                                            validezTemporal.tipo === '30dias' ? '30 días' : validezTemporal.tipo}
+                                </span>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 

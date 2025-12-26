@@ -1,7 +1,7 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import EmailVerificationBanner from "../EmailVerificationBanner";
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, LayoutDashboard, FileText, Info, Users, User } from 'lucide-react';
+import { LogOut, LayoutDashboard, FileText, BookOpen, Users, User } from 'lucide-react';
 
 export default function MainLayout() {
   const { user, logout } = useAuth();
@@ -57,9 +57,9 @@ export default function MainLayout() {
                 <FileText className="w-4 h-4" />
                 <span>Evaluaciones</span>
               </Link>
-              <Link to="/acerca-de" className={navLinkClass('/acerca-de')}>
-                <Info className="w-4 h-4" />
-                <span>Acerca de</span>
+              <Link to="/documentacion" className={navLinkClass('/documentacion')}>
+                <BookOpen className="w-4 h-4" />
+                <span>Documentación</span>
               </Link>
 
               {/* Enlace Admin - Solo visible para admins */}

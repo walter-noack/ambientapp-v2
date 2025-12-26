@@ -27,7 +27,8 @@ const crearUsuarioAdmin = async (req, res) => {
       telefono,
       role = 'user',
       tipoSuscripcion = 'free',
-      estadoSuscripcion = 'activa'
+      estadoSuscripcion = 'activa',
+      validezTemporalTipo = 'ilimitado'
     } = req.body;
 
     // Validaciones mínimas
@@ -59,6 +60,11 @@ const crearUsuarioAdmin = async (req, res) => {
       tipoSuscripcion,
       estadoSuscripcion
     });
+
+    // Establecer validez temporal si se especifica
+    if (validezTemporalTipo && validezTemporalTipo !== 'ilimitado') {
+      nuevoUsuario.establecerValidezTemporal(validezTemporalTipo);
+    }
 
     // Opcional: verificar/resetear límites si tu modelo lo necesita
     if (typeof nuevoUsuario.verificarYResetearLimites === 'function') {
@@ -244,7 +250,7 @@ const obtenerUsuario = async (req, res) => {
 const actualizarUsuario = async (req, res) => {
   try {
     const { id } = req.params;
-    const { tipoSuscripcion, estadoSuscripcion, limites, features, notas, role, isVerified } = req.body;
+    const { tipoSuscripcion, estadoSuscripcion, limites, features, notas, role, isVerified, validezTemporalTipo } = req.body;
 
     const usuario = await User.findById(id);
 
@@ -280,6 +286,17 @@ const actualizarUsuario = async (req, res) => {
 
     if (estadoSuscripcion) {
       usuario.estadoSuscripcion = estadoSuscripcion;
+    }
+
+    // Actualizar validez temporal si se especifica
+    if (validezTemporalTipo !== undefined) {
+      if (validezTemporalTipo === 'ilimitado') {
+        usuario.validezTemporal.tipo = 'ilimitado';
+        usuario.validezTemporal.fechaExpiracion = null;
+        usuario.validezTemporal.diasRestantes = null;
+      } else {
+        usuario.establecerValidezTemporal(validezTemporalTipo);
+      }
     }
 
     if (limites) {

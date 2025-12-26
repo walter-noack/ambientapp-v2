@@ -52,6 +52,10 @@ const registro = async (req, res) => {
     // Verificar y resetear límites (por si acaso)
     user.verificarYResetearLimites();
 
+    // Verificar validez temporal
+    const validez = user.verificarValidezTemporal();
+    await user.save();
+
     // Generar token JWT
     const token = generarToken(user._id);
 
@@ -69,7 +73,8 @@ const registro = async (req, res) => {
           role: user.role,
           features: user.features,
           planInfo: user.planInfo,
-          emailVerificado: user.emailVerificado
+          emailVerificado: user.emailVerificado,
+          validezTemporal: user.validezTemporal
         },
         token
       }
@@ -131,6 +136,21 @@ const login = async (req, res) => {
     // Verificar y resetear límites antes de devolver info
     user.verificarYResetearLimites();
 
+    // Verificar validez temporal
+    const validez = user.verificarValidezTemporal();
+
+    // Si el usuario expiró, no permitir login
+    if (!validez.valido) {
+      return res.status(403).json({
+        success: false,
+        message: validez.mensaje || 'Tu cuenta ha expirado',
+        data: {
+          diasRestantes: 0,
+          expirado: true
+        }
+      });
+    }
+
     // Actualizar último acceso
     user.ultimoAcceso = Date.now();
     await user.save();
@@ -138,7 +158,7 @@ const login = async (req, res) => {
     // Generar token JWT
     const token = generarToken(user._id);
 
-    // Responder (incluimos emailVerificado)
+    // Responder (incluimos emailVerificado y validezTemporal)
     res.status(200).json({
       success: true,
       message: 'Login exitoso',
@@ -155,7 +175,8 @@ const login = async (req, res) => {
           planInfo: user.planInfo,
           emailVerificado: user.emailVerificado,
           ultimoAcceso: user.ultimoAcceso,
-          createdAt: user.createdAt
+          createdAt: user.createdAt,
+          validezTemporal: user.validezTemporal
         },
         token
       }
@@ -187,6 +208,10 @@ const obtenerPerfil = async (req, res) => {
 
     // Verificar y resetear límites antes de devolver
     user.verificarYResetearLimites();
+
+    // Verificar validez temporal
+    user.verificarValidezTemporal();
+
     await user.save(); // Guardar si hubo reset
 
     res.status(200).json({
@@ -206,7 +231,9 @@ const obtenerPerfil = async (req, res) => {
           planInfo: user.planInfo,
           emailVerificado: user.emailVerificado,
           ultimoAcceso: user.ultimoAcceso,
-          createdAt: user.createdAt
+          createdAt: user.createdAt,
+          validezTemporal: user.validezTemporal,
+          limites: user.limites
         }
       }
     });
@@ -231,6 +258,9 @@ const obtenerUsuarioActual = async (req, res) => {
     // Verificar y resetear límites
     user.verificarYResetearLimites();
 
+    // Verificar validez temporal
+    user.verificarValidezTemporal();
+
     res.status(200).json({
       success: true,
       data: {
@@ -248,7 +278,9 @@ const obtenerUsuarioActual = async (req, res) => {
           planInfo: user.planInfo,
           emailVerificado: user.emailVerificado,
           ultimoAcceso: user.ultimoAcceso,
-          createdAt: user.createdAt
+          createdAt: user.createdAt,
+          validezTemporal: user.validezTemporal,
+          limites: user.limites
         }
       }
     });
@@ -291,6 +323,9 @@ const actualizarPerfil = async (req, res) => {
     // Verificar límites antes de devolver
     user.verificarYResetearLimites();
 
+    // Verificar validez temporal
+    user.verificarValidezTemporal();
+
     res.status(200).json({
       success: true,
       message: 'Perfil actualizado exitosamente',
@@ -309,7 +344,9 @@ const actualizarPerfil = async (req, res) => {
           planInfo: user.planInfo,
           emailVerificado: user.emailVerificado,
           ultimoAcceso: user.ultimoAcceso,
-          createdAt: user.createdAt
+          createdAt: user.createdAt,
+          validezTemporal: user.validezTemporal,
+          limites: user.limites
         }
       }
     });
@@ -422,6 +459,119 @@ const resendVerification = async (req, res) => {
   }
 };
 
+// ---------------------------------------------------------
+// Solicitar reset de contraseña
+// POST /api/auth/forgot-password  { email }  (público)
+// ---------------------------------------------------------
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Por favor proporciona un email'
+      });
+    }
+
+    const user = await User.findOne({ email });
+
+    // Por seguridad, siempre responder con éxito aunque el email no exista
+    if (!user) {
+      return res.status(200).json({
+        success: true,
+        message: 'Si el email existe, recibirás un enlace para resetear tu contraseña'
+      });
+    }
+
+    // Generar token de reset (válido por 1 hora)
+    const resetToken = user.generarTokenResetPassword(1);
+    await user.save();
+
+    // Enviar email de reset
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
+
+    try {
+      await sendVerificationEmail(user, resetToken, 'reset'); // Reutilizamos la función, ajustaremos después
+    } catch (err) {
+      console.error('Error enviando email de reset:', err);
+      // Limpiar token si falla el email
+      user.clearResetPasswordToken();
+      await user.save();
+
+      return res.status(500).json({
+        success: false,
+        message: 'Error al enviar el email de recuperación'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Si el email existe, recibirás un enlace para resetear tu contraseña'
+    });
+  } catch (error) {
+    console.error('Error en forgotPassword:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
+};
+
+// ---------------------------------------------------------
+// Resetear contraseña con token
+// POST /api/auth/reset-password  { token, newPassword }  (público)
+// ---------------------------------------------------------
+const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token y nueva contraseña son requeridos'
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'La contraseña debe tener al menos 6 caracteres'
+      });
+    }
+
+    // Buscar usuario por token
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() } // Token no expirado
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token inválido o expirado'
+      });
+    }
+
+    // Actualizar contraseña (el pre-save hook se encargará del hash)
+    user.password = newPassword;
+    user.clearResetPasswordToken();
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Contraseña actualizada exitosamente'
+    });
+  } catch (error) {
+    console.error('Error en resetPassword:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
+};
+
 module.exports = {
   registro,
   login,
@@ -429,5 +579,7 @@ module.exports = {
   obtenerUsuarioActual,
   actualizarPerfil,
   verifyEmail,
-  resendVerification
+  resendVerification,
+  forgotPassword,
+  resetPassword
 };

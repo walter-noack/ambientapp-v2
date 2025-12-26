@@ -39,6 +39,7 @@ const UsuariosAdmin = () => {
     tipoSuscripcion: 'free',
     estadoSuscripcion: 'activa',
     role: 'user',
+    validezTemporalTipo: 'ilimitado',
   });
   const [saving, setSaving] = useState(false);
 
@@ -52,6 +53,7 @@ const UsuariosAdmin = () => {
     tipoSuscripcion: 'free',
     estadoSuscripcion: 'activa',
     role: 'user',
+    validezTemporalTipo: 'ilimitado',
   });
   const [creating, setCreating] = useState(false);
 
@@ -156,6 +158,7 @@ const UsuariosAdmin = () => {
       tipoSuscripcion: user.tipoSuscripcion || 'free',
       estadoSuscripcion: user.estadoSuscripcion || 'activa',
       role: user.role || 'user',
+      validezTemporalTipo: user.validezTemporal?.tipo || 'ilimitado',
     });
   };
 
@@ -420,6 +423,9 @@ const UsuariosAdmin = () => {
                   Estado
                 </th>
                 <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">
+                  Validez
+                </th>
+                <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">
                   Verificado
                 </th>
                 <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">
@@ -433,13 +439,13 @@ const UsuariosAdmin = () => {
             <tbody className="bg-white divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-6 text-center text-gray-500">
                     Cargando usuarios...
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-6 text-center text-gray-500">
                     No se encontraron usuarios con los filtros actuales.
                   </td>
                 </tr>
@@ -476,11 +482,30 @@ const UsuariosAdmin = () => {
                           ? 'bg-emerald-100 text-emerald-800'
                           : user.estadoSuscripcion === 'suspendida'
                             ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
+                            : user.estadoSuscripcion === 'expirada'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-red-100 text-red-800'
                           }`}
                       >
                         {user.estadoSuscripcion}
                       </span>
+                    </td>
+
+                    {/* Columna Validez Temporal */}
+                    <td className="px-4 py-2">
+                      {user.validezTemporal?.tipo && user.validezTemporal.tipo !== 'ilimitado' ? (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          (user.validezTemporal.diasRestantes || 0) <= 3
+                            ? 'bg-red-100 text-red-800'
+                            : (user.validezTemporal.diasRestantes || 0) <= 7
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {user.validezTemporal.diasRestantes || 0} {(user.validezTemporal.diasRestantes || 0) === 1 ? 'día' : 'días'} ({user.validezTemporal.tipo === '7dias' ? '7d' : user.validezTemporal.tipo === '15dias' ? '15d' : '30d'})
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-500">Ilimitado</span>
+                      )}
                     </td>
 
                     {/* Columna Verificado + acciones relacionadas */}
@@ -708,6 +733,22 @@ const EditUserModal = ({ user, form, onChange, onClose, onSave, saving }) => {
               <option value="admin">Admin</option>
             </select>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Validez temporal
+            </label>
+            <select
+              value={form.validezTemporalTipo}
+              onChange={(e) => onChange('validezTemporalTipo', e.target.value)}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+            >
+              <option value="ilimitado">Ilimitado</option>
+              <option value="7dias">7 días</option>
+              <option value="15dias">15 días</option>
+              <option value="30dias">30 días</option>
+            </select>
+          </div>
         </div>
 
         <div className="flex justify-end space-x-2 pt-2">
@@ -783,6 +824,16 @@ const AddUserModal = ({ form, onChange, onClose, onCreate, creating }) => {
             <select value={form.role} onChange={(e) => onChange('role', e.target.value)} className="w-full rounded-md border-gray-300 shadow-sm p-2 text-sm">
               <option value="user">Usuario</option>
               <option value="admin">Admin</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Validez temporal</label>
+            <select value={form.validezTemporalTipo} onChange={(e) => onChange('validezTemporalTipo', e.target.value)} className="w-full rounded-md border-gray-300 shadow-sm p-2 text-sm">
+              <option value="ilimitado">Ilimitado</option>
+              <option value="7dias">7 días</option>
+              <option value="15dias">15 días</option>
+              <option value="30dias">30 días</option>
             </select>
           </div>
         </div>

@@ -48,8 +48,29 @@ const userSchema = new mongoose.Schema({
   // Estado de la suscripción
   estadoSuscripcion: {
     type: String,
-    enum: ['activa', 'suspendida', 'cancelada'],
+    enum: ['activa', 'suspendida', 'cancelada', 'expirada'],
     default: 'activa'
+  },
+
+  // Validez temporal del usuario (días)
+  validezTemporal: {
+    tipo: {
+      type: String,
+      enum: ['7dias', '15dias', '30dias', 'ilimitado'],
+      default: 'ilimitado'
+    },
+    fechaCreacion: {
+      type: Date,
+      default: Date.now
+    },
+    fechaExpiracion: {
+      type: Date,
+      default: null
+    },
+    diasRestantes: {
+      type: Number,
+      default: null
+    }
   },
 
   // Fechas de suscripción
@@ -139,6 +160,16 @@ const userSchema = new mongoose.Schema({
     default: null
   },
 
+  // Reset de contraseña
+  resetPasswordToken: {
+    type: String,
+    default: null
+  },
+  resetPasswordExpires: {
+    type: Date,
+    default: null
+  },
+
   // Metadata
   ultimoAcceso: {
     type: Date,
@@ -181,6 +212,90 @@ userSchema.methods.clearVerificationToken = function() {
   this.verificationTokenExpires = undefined;
 };
 
+// Método: Generar token de reset de contraseña (1 hora por defecto)
+userSchema.methods.generarTokenResetPassword = function(ttlHoras = 1) {
+  const token = crypto.randomBytes(32).toString('hex');
+  this.resetPasswordToken = token;
+  this.resetPasswordExpires = Date.now() + ttlHoras * 60 * 60 * 1000;
+  return token;
+};
+
+// Método: Limpiar token de reset de contraseña
+userSchema.methods.clearResetPasswordToken = function() {
+  this.resetPasswordToken = undefined;
+  this.resetPasswordExpires = undefined;
+};
+
+// Método: Calcular días restantes de validez temporal
+userSchema.methods.calcularDiasRestantes = function() {
+  // Si no tiene validez temporal o es ilimitado, retornar null
+  if (!this.validezTemporal.tipo || this.validezTemporal.tipo === 'ilimitado') {
+    return null;
+  }
+
+  // Si no hay fecha de expiración establecida, retornar null
+  if (!this.validezTemporal.fechaExpiracion) {
+    return null;
+  }
+
+  const ahora = new Date();
+  const fechaExpiracion = new Date(this.validezTemporal.fechaExpiracion);
+
+  // Calcular diferencia en milisegundos y convertir a días
+  const diferenciaMilisegundos = fechaExpiracion - ahora;
+  const diasRestantes = Math.ceil(diferenciaMilisegundos / (1000 * 60 * 60 * 24));
+
+  // Si es negativo, el usuario ya expiró
+  return Math.max(0, diasRestantes);
+};
+
+// Método: Verificar y actualizar estado de validez temporal
+userSchema.methods.verificarValidezTemporal = function() {
+  // Si no tiene validez temporal o es ilimitado, no hacer nada
+  if (!this.validezTemporal.tipo || this.validezTemporal.tipo === 'ilimitado') {
+    return { valido: true, diasRestantes: null };
+  }
+
+  const diasRestantes = this.calcularDiasRestantes();
+  this.validezTemporal.diasRestantes = diasRestantes;
+
+  // Si llegó a 0 días, marcar como expirado
+  if (diasRestantes === 0) {
+    this.estadoSuscripcion = 'expirada';
+    return { valido: false, diasRestantes: 0, mensaje: 'Tu cuenta ha expirado' };
+  }
+
+  return { valido: true, diasRestantes };
+};
+
+// Método: Establecer validez temporal al crear usuario
+userSchema.methods.establecerValidezTemporal = function(tipoDias) {
+  const diasMap = {
+    '7dias': 7,
+    '15dias': 15,
+    '30dias': 30,
+    'ilimitado': null
+  };
+
+  const dias = diasMap[tipoDias];
+
+  if (dias === null || dias === undefined) {
+    this.validezTemporal.tipo = 'ilimitado';
+    this.validezTemporal.fechaExpiracion = null;
+    this.validezTemporal.diasRestantes = null;
+    return;
+  }
+
+  const fechaCreacion = new Date();
+  const fechaExpiracion = new Date(fechaCreacion);
+  fechaExpiracion.setDate(fechaExpiracion.getDate() + dias);
+
+  this.validezTemporal.tipo = tipoDias;
+  this.validezTemporal.fechaCreacion = fechaCreacion;
+  this.validezTemporal.fechaExpiracion = fechaExpiracion;
+  this.validezTemporal.diasRestantes = dias;
+};
+
 // Método: Verificar y resetear límites mensuales si es necesario
 userSchema.methods.verificarYResetearLimites = function() {
   if (this.tipoSuscripcion === 'pro') {
@@ -202,6 +317,12 @@ userSchema.methods.verificarYResetearLimites = function() {
 
 // Método: Verificar si puede hacer diagnósticos
 userSchema.methods.puedeHacerDiagnostico = function() {
+  // Primero verificar validez temporal
+  const validez = this.verificarValidezTemporal();
+  if (!validez.valido) {
+    return false;
+  }
+
   // Si es Pro, siempre puede (ilimitado)
   if (this.tipoSuscripcion === 'pro') {
     return true;
