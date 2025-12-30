@@ -84,6 +84,12 @@ export function identificarOportunidades(evaluacion) {
     const alcance1 = evaluacion.alcance1 || 0;
     const alcance2 = evaluacion.alcance2 || 0;
     const total = alcance1 + alcance2;
+
+    if (total === 0) {
+      // Si no hay datos de emisiones, no generar oportunidad
+      return oportunidades;
+    }
+
     const mayorAlcance = alcance1 > alcance2 ? 'combustibles (Alcance 1)' : 'electricidad (Alcance 2)';
     const porcentajeMayor = alcance1 > alcance2
       ? ((alcance1 / total) * 100).toFixed(1)
@@ -103,14 +109,14 @@ export function identificarOportunidades(evaluacion) {
 
   // AGUA
   if (scores.waterScore < 70) {
-    const consumo = evaluacion.consumoAgua || 0;
-    const intensidad = evaluacion.intensidadHidrica?.valor || 0;
+    const consumo = evaluacion?.agua?.consumoTotal || evaluacion?.waterData?.consumoMensual || 0;
+    const intensidad = evaluacion?.intensidadHidrica || 0;
 
     oportunidades.push({
       area: 'Gestión Hídrica',
       puntaje: scores.waterScore,
       gap: `${100 - scores.waterScore} puntos por debajo del nivel óptimo`,
-      causa: intensidad > 100 ? 'Alta intensidad hídrica por unidad' : 'Consumo elevado sin reutilización',
+      causa: intensidad > 1000 ? 'Alta intensidad hídrica por persona' : 'Consumo elevado sin reutilización',
       accionClave: 'Implementar sistemas de recirculación de agua',
       icono: 'Droplet'
     });
@@ -118,14 +124,16 @@ export function identificarOportunidades(evaluacion) {
 
   // RESIDUOS
   if (scores.wasteScore < 70) {
-    const tasa = evaluacion.residuosGenerados > 0
-      ? ((evaluacion.residuosValorizados / evaluacion.residuosGenerados) * 100).toFixed(1)
-      : 0;
+    const generados = evaluacion?.residuos?.generados || 0;
+    const valorizados = evaluacion?.residuos?.valorizados || 0;
+    const tasa = generados > 0
+      ? ((valorizados / generados) * 100).toFixed(1).replace('.', ',')
+      : '0,0';
 
     oportunidades.push({
       area: 'Gestión de Residuos',
       puntaje: scores.wasteScore,
-      gap: `Solo ${tasa}% de valorización`,
+      gap: `Solo ${tasa}% de residuos valorizados`,
       causa: 'Baja segregación en origen o falta de convenios',
       accionClave: 'Implementar programa de separación en origen',
       icono: 'Trash2'
@@ -165,10 +173,11 @@ export function generarRecomendacionesPriorizadas(evaluacion) {
   const scores = evaluacion?.scores || {};
   const alcance1 = evaluacion.alcance1 || 0;
   const alcance2 = evaluacion.alcance2 || 0;
+  const total = alcance1 + alcance2;
 
-  // RECOMENDACIÓN 1: Eficiencia energética (si Alcance 2 es alto)
-  if (alcance2 > alcance1 * 0.4) {
-    const porcentajeA2 = ((alcance2 / (alcance1 + alcance2)) * 100).toFixed(1);
+  // RECOMENDACIÓN 1: Eficiencia energética (si Alcance 2 es significativo)
+  if (alcance2 > 0 && alcance2 > alcance1 * 0.4) {
+    const porcentajeA2 = ((alcance2 / total) * 100).toFixed(1);
     recomendaciones.push({
       id: 1,
       titulo: 'Optimizar consumo energético',
@@ -203,11 +212,13 @@ export function generarRecomendacionesPriorizadas(evaluacion) {
   }
 
   // RECOMENDACIÓN 2: Separación de residuos
-  const tasaValor = evaluacion.residuosGenerados > 0
-    ? (evaluacion.residuosValorizados / evaluacion.residuosGenerados) * 100
+  const generados = evaluacion?.residuosGenerados || 0;
+  const valorizados = evaluacion?.residuosValorizados || 0;
+  const tasaValor = generados > 0
+    ? (valorizados / generados) * 100
     : 0;
 
-  if (tasaValor < 75) {
+  if (generados > 0 && tasaValor < 75) {
     recomendaciones.push({
       id: 2,
       titulo: 'Implementar programa de segregación en origen',
@@ -319,7 +330,7 @@ export function generarRecomendacionesPriorizadas(evaluacion) {
     });
   }
 
-  // RECOMENDACIÓN 5: Economía circular avanzada
+  // RECOMENDACIÓN 5: Economía circular avanzada (solo si ya tienen buena base)
   if (tasaValor >= 70) {
     recomendaciones.push({
       id: 5,

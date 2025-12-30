@@ -55,7 +55,7 @@ export default function MainLayout() {
               </Link>
               <Link to="/evaluaciones" className={navLinkClass('/evaluaciones')}>
                 <FileText className="w-4 h-4" />
-                <span>Evaluaciones</span>
+                <span>Diagnósticos</span>
               </Link>
               <Link to="/documentacion" className={navLinkClass('/documentacion')}>
                 <BookOpen className="w-4 h-4" />

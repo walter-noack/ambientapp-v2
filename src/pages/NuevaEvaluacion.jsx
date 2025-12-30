@@ -16,8 +16,10 @@ export default function NuevaEvaluacion({ modoEdicion = false, modoDuplicar = fa
   const { id } = useParams();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
-  const [cargandoDatos, setCargandoDatos] = useState(modoEdicion);
+  const [cargandoDatos, setCargandoDatos] = useState((modoEdicion || modoDuplicar) && !!id);
+  console.log('🔎 NuevaEvaluacion props:', { modoEdicion, modoDuplicar });
   const [formData, setFormData] = useState({
+
     // Paso 1: Información General
     companyName: '',
     semestre: 'S1',
@@ -64,63 +66,104 @@ export default function NuevaEvaluacion({ modoEdicion = false, modoDuplicar = fa
 
   // Cargar datos si estamos en modo edición
   useEffect(() => {
-    if (modoEdicion || modoDuplicar && id) {
+    console.log('🌀 useEffect editar/duplicar', { modoEdicion, modoDuplicar, id });
+
+    if ((modoEdicion || modoDuplicar) && id) {
+      setCargandoDatos(true); // 👈 Agregar esta línea al inicio
+
       async function cargarEvaluacion() {
         try {
-          const evaluacion = await getEvaluacionById(id);
-          console.log('📋 Datos de diagnóstico cargado:', evaluacion);
+          const response = await getEvaluacionById(id);
+          console.log('📋 Datos de diagnóstico cargado desde backend:', response);
+
+          // Aquí ajustamos según la estructura real { success, data: { diagnostico: { ... } } }
+          const evaluacion =
+            response?.data?.diagnostico ||  // caso correcto
+            response?.diagnostico ||        // por si cambia en el futuro
+            response?.data ||               // fallback
+            response;                       // último recurso
+
+          console.log('✅ Evaluación normalizada:', evaluacion);
 
           // Mapear datos del diagnóstico al formato del formulario
           setFormData({
+            // Paso 1: Información General
             companyName: modoDuplicar
-              ? `${evaluacion.companyName} (Copia)`
-              : evaluacion.companyName || '',
-            semestre: evaluacion.period?.includes('S1') ? 'S1' : evaluacion.period?.includes('Q1') || evaluacion.period?.includes('Q2') ? 'S1' : 'S2',
-            anio: parseInt(evaluacion.period?.match(/\d{4}/)?.[0]) || new Date().getFullYear(),
-            fechaEvaluacion: new Date().toISOString().split('T')[0],
+              ? `${evaluacion.companyName || ''} (Copia)`
+              : (evaluacion.companyName || ''),
 
+            semestre: evaluacion.semestre || 'S1',
+            anio: evaluacion.anio || new Date().getFullYear(),
+
+            fechaEvaluacion: evaluacion.fechaEvaluacion
+              ? evaluacion.fechaEvaluacion.split('T')[0]
+              : new Date().toISOString().split('T')[0],
+
+            // Dimensiones activadas
             dimensiones: {
-              carbono: !!(evaluacion.alcance1 || evaluacion.alcance2),
-              agua: false, // No hay datos de agua en los datos fake
-              residuos: !!(evaluacion.residuosGenerados),
-              rep: !!(evaluacion.productosREP?.length)
+              carbono: evaluacion.dimensiones?.carbono ?? true,
+              agua: evaluacion.dimensiones?.agua ?? true,
+              residuos: evaluacion.dimensiones?.residuos ?? true,
+              rep: evaluacion.dimensiones?.rep ?? !!(evaluacion.productosREP?.length),
             },
 
+            // Paso 2: Huella de Carbono
             carbono: {
-              diesel: '',
-              bencina: '',
-              gasNatural: '',
-              otrosCombustibles: '',
-              electricidad: ''
-              // NOTA: Los datos fake solo tienen alcance1/alcance2 calculados,
-              // no los consumos individuales. En producción con backend real,
-              // estos campos se llenarían.
+              diesel: evaluacion.carbono?.diesel != null
+                ? String(evaluacion.carbono.diesel)
+                : '',
+              bencina: evaluacion.carbono?.bencina != null
+                ? String(evaluacion.carbono.bencina)
+                : '',
+              gasNatural: evaluacion.carbono?.gasNatural != null
+                ? String(evaluacion.carbono.gasNatural)
+                : '',
+              otrosCombustibles: evaluacion.carbono?.otrosCombustibles != null
+                ? String(evaluacion.carbono.otrosCombustibles)
+                : '',
+              electricidad: evaluacion.carbono?.electricidad != null
+                ? String(evaluacion.carbono.electricidad)
+                : '',
             },
 
+            // Paso 3: Agua
             agua: {
-              consumoTotal: '',
-              tipoMedicion: 'persona',
-              numeroTrabajadores: '',
-              produccionAnual: ''
-              // NOTA: Los datos fake no tienen información de agua
+              consumoTotal: evaluacion.agua?.consumoTotal != null
+                ? String(evaluacion.agua.consumoTotal)
+                : '',
+              tipoMedicion: evaluacion.agua?.tipoMedicion || 'persona',
+              numeroTrabajadores: evaluacion.agua?.numeroTrabajadores != null
+                ? String(evaluacion.agua.numeroTrabajadores)
+                : '',
+              produccionAnual: evaluacion.agua?.produccionAnual != null
+                ? String(evaluacion.agua.produccionAnual)
+                : '',
             },
 
+            // Paso 4: Residuos
             residuos: {
-              generados: evaluacion.residuosGenerados ? String(evaluacion.residuosGenerados) : '',
-              valorizados: evaluacion.residuosValorizados ? String(evaluacion.residuosValorizados) : ''
+              generados: evaluacion.residuos?.generados != null
+                ? String(evaluacion.residuos.generados)
+                : '',
+              valorizados: evaluacion.residuos?.valorizados != null
+                ? String(evaluacion.residuos.valorizados)
+                : '',
             },
 
-            productosREP: Array.isArray(evaluacion.productosREP) ? evaluacion.productosREP.map(p => ({
-              categoria: p.categoria || p.producto || '',
-              subCategoria: p.subCategoria || '',
-              cantidadGenerada: p.cantidadGenerada || 0,
-              cantidadValorizada: p.cantidadValorizada || 0
-            })) : []
+            // Paso 5: REP
+            productosREP: Array.isArray(evaluacion.productosREP)
+              ? evaluacion.productosREP.map(p => ({
+                categoria: p.categoria || '',
+                subCategoria: p.subCategoria || '',
+                cantidadGenerada: p.cantidadGenerada ?? 0,
+                cantidadValorizada: p.cantidadValorizada ?? 0,
+              }))
+              : [],
           });
 
           setCargandoDatos(false);
         } catch (error) {
-          console.error('Error cargando diagnóstico:', error);
+          console.error('❌ Error cargando diagnóstico:', error);
           alert('Error al cargar los datos del diagnóstico');
           setCargandoDatos(false);
         }
@@ -128,7 +171,7 @@ export default function NuevaEvaluacion({ modoEdicion = false, modoDuplicar = fa
 
       cargarEvaluacion();
     }
-  }, [modoEdicion, id]);
+  }, [modoEdicion, modoDuplicar, id]);
 
   // Función para actualizar formData
   const updateFormData = (section, field, value) => {
@@ -243,6 +286,10 @@ export default function NuevaEvaluacion({ modoEdicion = false, modoDuplicar = fa
       </div>
     );
   }
+
+  // 👇 AGREGA ESTE LOG AQUÍ
+  console.log('📝 Current Form Data:', formData);
+  console.log('📝 Company Name:', formData.companyName);
 
   return (
     <div className="min-h-screen bg-slate-50 py-8">

@@ -620,24 +620,49 @@ export default function InformePDF({
                                     )}
 
                                     {/* Hallazgo 3: Residuos */}
-                                    {scores.wasteScore < 60 && (
-                                        <li className="text-xs text-slate-700 flex items-start gap-2">
-                                            <span className="text-red-600 font-bold">•</span>
-                                            <span>
-                                                <strong>Baja valorización de residuos:</strong> Solo el {((residuosValorizados / residuosGenerados) * 100).toFixed(0)}%
-                                                de los residuos se valoriza. Implementar segregación en origen puede duplicar esta tasa.
-                                            </span>
-                                        </li>
-                                    )}
-                                    {scores.wasteScore >= 60 && (
-                                        <li className="text-xs text-slate-700 flex items-start gap-2">
-                                            <span className="text-green-600 font-bold">•</span>
-                                            <span>
-                                                <strong>Valorización destacada:</strong> Con {((residuosValorizados / residuosGenerados) * 100).toFixed(0)}%
-                                                de valorización, la empresa supera las metas legales y puede aspirar a certificaciones ambientales.
-                                            </span>
-                                        </li>
-                                    )}
+                                    {(() => {
+                                        const tasaValorizacion = residuosGenerados > 0
+                                            ? ((residuosValorizados / residuosGenerados) * 100)
+                                            : 0;
+                                        const tasaTexto = `${tasaValorizacion.toFixed(1).replace('.', ',')}%`;
+
+                                        if (scores.wasteScore < 60) {
+                                            return (
+                                                <li className="text-xs text-slate-700 flex items-start gap-2">
+                                                    <span className="text-red-600 font-bold">•</span>
+                                                    <span>
+                                                        <strong>Baja valorización de residuos:</strong> Solo {tasaTexto} de residuos valorizados.
+                                                        Costos de disposición elevados y pérdida de oportunidades de economía circular.
+                                                        Implementar segregación en origen puede duplicar esta tasa.
+                                                    </span>
+                                                </li>
+                                            );
+                                        }
+
+                                        if (scores.wasteScore >= 60 && scores.wasteScore < 85) {
+                                            return (
+                                                <li className="text-xs text-slate-700 flex items-start gap-2">
+                                                    <span className="text-amber-600 font-bold">•</span>
+                                                    <span>
+                                                        <strong>Valorización intermedia:</strong> Con {tasaTexto} de valorización,
+                                                        la empresa cumple requisitos básicos pero tiene espacio importante de mejora
+                                                        para alcanzar estándares de excelencia.
+                                                    </span>
+                                                </li>
+                                            );
+                                        }
+
+                                        // wasteScore >= 85
+                                        return (
+                                            <li className="text-xs text-slate-700 flex items-start gap-2">
+                                                <span className="text-green-600 font-bold">•</span>
+                                                <span>
+                                                    <strong>Valorización destacada:</strong> Con {tasaTexto} de valorización,
+                                                    la empresa supera las metas legales y puede aspirar a certificaciones ambientales.
+                                                </span>
+                                            </li>
+                                        );
+                                    })()}
 
                                     {/* Hallazgo 4: REP (si aplica) */}
                                     {productosREP.length > 0 && (
@@ -876,7 +901,7 @@ export default function InformePDF({
                         </h3>
                         <p className="text-sm leading-relaxed mb-4">{textoCarbono}</p>
 
-                        {/* KPIs */}
+                        {/* KPIs - TAMAÑOS REDUCIDOS */}
                         {(() => {
                             const totalKg = emisiones?.totalKg || 0;
                             const alcance1Kg = emisiones?.alcance1 || 0;
@@ -893,20 +918,20 @@ export default function InformePDF({
                                         <p className="text-[10px] uppercase tracking-wider text-slate-600 mb-1">
                                             TOTAL
                                         </p>
-                                        <p className="text-2xl font-bold text-slate-900">
+                                        <p className="text-lg font-bold text-slate-900">
                                             {total.valor}
                                         </p>
-                                        <p className="text-[10px] text-slate-500">{total.unidad}</p>
+                                        <p className="text-[9px] text-slate-500">{total.unidad}</p>
                                     </div>
 
                                     <div className="text-center p-3 bg-emerald-50 rounded-lg border border-emerald-200">
                                         <p className="text-[10px] uppercase tracking-wider text-emerald-700 mb-1">
                                             A1
                                         </p>
-                                        <p className="text-2xl font-bold text-emerald-900">
+                                        <p className="text-lg font-bold text-emerald-900">
                                             {a1.valor}
                                         </p>
-                                        <p className="text-[10px] text-emerald-600">
+                                        <p className="text-[9px] text-emerald-600">
                                             {a1.unidad} ({formatPorcentaje(porcentajeA1)}%)
                                         </p>
                                     </div>
@@ -915,10 +940,10 @@ export default function InformePDF({
                                         <p className="text-[10px] uppercase tracking-wider text-blue-700 mb-1">
                                             A2
                                         </p>
-                                        <p className="text-2xl font-bold text-blue-900">
+                                        <p className="text-lg font-bold text-blue-900">
                                             {a2.valor}
                                         </p>
-                                        <p className="text-[10px] text-blue-600">
+                                        <p className="text-[9px] text-blue-600">
                                             {a2.unidad} ({formatPorcentaje(porcentajeA2)}%)
                                         </p>
                                     </div>
@@ -931,11 +956,20 @@ export default function InformePDF({
 
                 {/* DESGLOSE, META Y PROYECCIÓN */}
                 {(() => {
-                    const alcance1 = emisiones?.alcance1 || 0;
-                    const alcance2 = emisiones?.alcance2 || 0;
+                    const alcance1Kg = emisiones?.alcance1 || 0;
+                    const alcance2Kg = emisiones?.alcance2 || 0;
                     const totalKg = emisiones?.totalKg || 0;
 
-                    // Determinar si mostrar en kg o toneladas
+                    // Función helper para formatear kg o tCO₂e según valor
+                    const formatEmisionKgToBestUnit = (kg) => {
+                        if (kg >= 1000) {
+                            const ton = kg / 1000;
+                            return `${formatNumber(ton, 2)} tCO₂e`;
+                        }
+                        return `${formatNumber(kg, 0)} kg`;
+                    };
+
+                    // Determinar si mostrar en kg o toneladas para totales
                     const esMenorA1Ton = totalKg < 1000;
                     const valorMostrar = esMenorA1Ton ? totalKg : (totalKg / 1000);
                     const unidad = esMenorA1Ton ? 'kgCO₂e' : 'tCO₂e';
@@ -949,7 +983,7 @@ export default function InformePDF({
                                 </h4>
 
                                 <div className="grid grid-cols-2 gap-3">
-                                    {/* Alcance 1 - Izquierda, mismo formato que Alcance 2 */}
+                                    {/* Alcance 1 - Izquierda */}
                                     <div className="p-3 bg-white rounded border border-slate-200">
                                         <p className="text-[10px] font-bold text-slate-800 mb-2">
                                             Alcance 1 - Emisiones directas
@@ -959,7 +993,7 @@ export default function InformePDF({
                                                 <li className="flex justify-between">
                                                     <span>• Diesel:</span>
                                                     <span className="font-semibold">
-                                                        {formatNumber(emisionesDiesel, 0)} kg
+                                                        {formatEmisionKgToBestUnit(emisionesDiesel)}
                                                     </span>
                                                 </li>
                                             )}
@@ -967,7 +1001,7 @@ export default function InformePDF({
                                                 <li className="flex justify-between">
                                                     <span>• Gasolina:</span>
                                                     <span className="font-semibold">
-                                                        {formatNumber(emisionesBencina, 0)} kg
+                                                        {formatEmisionKgToBestUnit(emisionesBencina)}
                                                     </span>
                                                 </li>
                                             )}
@@ -975,7 +1009,7 @@ export default function InformePDF({
                                                 <li className="flex justify-between">
                                                     <span>• Gas natural:</span>
                                                     <span className="font-semibold">
-                                                        {formatNumber(emisionesGasNatural, 0)} kg
+                                                        {formatEmisionKgToBestUnit(emisionesGasNatural)}
                                                     </span>
                                                 </li>
                                             )}
@@ -983,7 +1017,7 @@ export default function InformePDF({
                                                 <li className="flex justify-between">
                                                     <span>• Otros combustibles:</span>
                                                     <span className="font-semibold">
-                                                        {formatNumber(emisionesOtros, 0)} kg
+                                                        {formatEmisionKgToBestUnit(emisionesOtros)}
                                                     </span>
                                                 </li>
                                             )}
@@ -1001,13 +1035,13 @@ export default function InformePDF({
                                             <li className="flex justify-between border-t border-slate-200 pt-1 mt-1">
                                                 <span className="font-bold">Total Alcance 1:</span>
                                                 <span className="font-bold text-red-700">
-                                                    {formatNumber(alcance1Kg, 0)} kg
+                                                    {formatEmisionKgToBestUnit(alcance1Kg)}
                                                 </span>
                                             </li>
                                         </ul>
                                     </div>
 
-                                    {/* Alcance 2 - Derecha (igual que antes) */}
+                                    {/* Alcance 2 - Derecha */}
                                     <div className="p-3 bg-white rounded border border-orange-200">
                                         <p className="text-[10px] font-bold text-orange-800 mb-2">
                                             Alcance 2 - Emisiones indirectas
@@ -1016,13 +1050,13 @@ export default function InformePDF({
                                             <li className="flex justify-between">
                                                 <span>• Electricidad comprada:</span>
                                                 <span className="font-semibold">
-                                                    {formatNumber(emisionesElectricidad, 0)} kg
+                                                    {formatEmisionKgToBestUnit(emisionesElectricidad)}
                                                 </span>
                                             </li>
                                             <li className="flex justify-between border-t border-slate-200 pt-1 mt-1">
                                                 <span className="font-bold">Total Alcance 2:</span>
                                                 <span className="font-bold text-orange-700">
-                                                    {formatNumber(alcance2Kg, 0)} kg
+                                                    {formatEmisionKgToBestUnit(alcance2Kg)}
                                                 </span>
                                             </li>
                                         </ul>
@@ -1740,11 +1774,8 @@ export default function InformePDF({
                                 {/* Riesgo 3: Gestión de residuos */}
                                 {(() => {
                                     const wasteScore = ev?.scores?.wasteScore || 100;
-                                    const tasaValor = ev.residuosGenerados > 0
-                                        ? (ev.residuosValorizados / ev.residuosGenerados) * 100
-                                        : 0;
 
-                                    if (wasteScore < 60 || tasaValor < 50) {
+                                    if (wasteScore < 60 || tasaValorizacion < 50) {
                                         return (
                                             <div className="p-3 bg-yellow-50 border-l-4 border-yellow-500 rounded-r-lg">
                                                 <div className="flex items-start gap-2">
@@ -1754,7 +1785,7 @@ export default function InformePDF({
                                                             Baja valorización de residuos
                                                         </p>
                                                         <p className="text-[10px] text-yellow-800">
-                                                            Solo {tasaValor.toFixed(1)}% de residuos valorizados.
+                                                            Solo {tasaValorizacion.toFixed(1).replace('.', ',')}% de residuos valorizados.
                                                             Costos de disposición elevados y pérdida de oportunidades de economía circular.
                                                         </p>
                                                     </div>
@@ -1917,7 +1948,7 @@ export default function InformePDF({
                                     }}
                                 >
                                     <HeaderSection
-                                        title="Plan de acción priorizado (continuación)"
+                                        title="Plan de acción priorizado"
                                         desc="Recomendaciones adicionales para implementación escalonada."
                                         page="9B"
                                     />
@@ -1930,7 +1961,7 @@ export default function InformePDF({
                                                     <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
                                                 </div>
                                                 <h3 className="text-sm font-bold text-slate-800">
-                                                    Alta prioridad (continuación)
+                                                    Alta prioridad
                                                 </h3>
                                                 <BadgePlazoSVG
                                                     texto="Implementar en 0-6 meses"
