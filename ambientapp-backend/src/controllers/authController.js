@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const { generarToken } = require('../utils/jwt'); // tu helper actual
 const { sendVerificationEmail } = require('../utils/email'); // util nodemailer
+const { v4: uuidv4 } = require('uuid');
 
 // @desc    Registrar nuevo usuario
 // @route   POST /api/auth/registro
@@ -151,12 +152,24 @@ const login = async (req, res) => {
       });
     }
 
+    // Generar nuevo sessionId
+    const sessionId = uuidv4();
+
+    // Guardarlo en el usuario
+    user.currentSessionId = sessionId;
+
     // Actualizar último acceso
     user.ultimoAcceso = Date.now();
     await user.save();
 
-    // Generar token JWT
-    const token = generarToken(user._id);
+    // Generar token JWT (incluyendo sessionId)
+    const token = generarToken(user._id, sessionId);
+
+    // DEBUG
+    console.log('Login OK para', email, {
+      sessionId,
+      tokenPreview: token.slice(0, 30) + '...',
+    });
 
     // Responder (incluimos emailVerificado y validezTemporal)
     res.status(200).json({

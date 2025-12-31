@@ -17,8 +17,9 @@ import AcercaDe from './pages/AcercaDe';
 import Landing from './pages/Landing';
 import Documentation from './pages/Documentation';
 import Soporte from './pages/Soporte';
-import VerifyEmail from './pages/VerifyEmail';
+import Contacto from './pages/Contacto';
 
+import VerifyEmail from './pages/VerifyEmail';
 import UsuariosAdmin from './pages/Admin/UsuariosAdmin';
 import Perfil from './pages/Perfil';
 import Upgrade from './pages/Upgrade';
@@ -130,6 +131,13 @@ export default function AppRouter() {
           </PublicRoute>
         }
       />
+
+      <Route path="/contacto" 
+      element={
+        <PublicRoute>
+            <Contacto />
+          </PublicRoute>
+      } />
 
       {/* Rutas protegidas con layout */}
       <Route path="/*" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>

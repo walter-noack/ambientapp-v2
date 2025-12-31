@@ -6,38 +6,52 @@ const protegerRuta = async (req, res, next) => {
   try {
     // 1. Verificar que existe el token
     let token;
-    
+
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     }
-    
+
     if (!token) {
       return res.status(401).json({
         success: false,
         message: 'No autorizado. Token no proporcionado'
       });
     }
-    
+
     // 2. Verificar el token
     const decoded = verificarToken(token);
-    
+    console.log('Token decodificado en protegerRuta:', decoded); // 👈 DEBUG
+
     if (!decoded) {
       return res.status(401).json({
         success: false,
         message: 'Token inválido o expirado'
       });
     }
-    
+
     // 3. Buscar usuario
     const user = await User.findById(decoded.id).select('-password');
-    
+
     if (!user) {
       return res.status(401).json({
         success: false,
         message: 'Usuario no encontrado'
       });
     }
-    
+
+// 3.5. Validar sesión única solo para usuarios 'free'
+if (user.tipoSuscripcion === 'free') {
+  // Para cuentas free exigimos token con sessionId y que coincida con el guardado en BD
+  if (!decoded.sessionId || !user.currentSessionId || user.currentSessionId !== decoded.sessionId) {
+    return res.status(401).json({
+      success: false,
+      message: 'Tu sesión ha sido cerrada porque iniciaste sesión desde otro dispositivo.',
+      code: 'SESSION_INVALIDATED'
+    });
+  }
+}
+// Usuarios 'pro' no pasan por esta validación y pueden tener múltiples sesiones activas
+
     // 4. Verificar validez temporal del usuario
     const validez = user.verificarValidezTemporal();
     if (!validez.valido) {
@@ -61,7 +75,7 @@ const protegerRuta = async (req, res, next) => {
     // 6. Agregar usuario al request
     req.user = user;
     next();
-    
+
   } catch (error) {
     return res.status(500).json({
       success: false,

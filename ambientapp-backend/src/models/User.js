@@ -174,7 +174,12 @@ const userSchema = new mongoose.Schema({
   ultimoAcceso: {
     type: Date,
     default: Date.now
-  }
+  },
+
+  currentSessionId: {    // 👈 NUEVO
+  type: String,
+  default: null
+}
 }, {
   timestamps: true,
   toJSON: { virtuals: true },

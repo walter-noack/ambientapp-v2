@@ -1,15 +1,18 @@
+// src/pages/Login.jsx
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/shared/ui/Button';
 import { Input } from '../components/shared/ui/Input';
 import { Alert } from '../components/shared/ui/Alert';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -82,7 +85,7 @@ export default function Login() {
               disabled={loading}
             />
 
-            {/* Password */}
+            {/* Password con botón ojo */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-slate-700">
@@ -95,13 +98,29 @@ export default function Login() {
                   ¿Olvidaste tu contraseña?
                 </a>
               </div>
-              <Input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
+
+              <div className="relative">
+                <Input
+
+                  type={passwordVisible ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  rightElement={
+                    <button
+                      type="button"
+                      onClick={() => setPasswordVisible(v => !v)}
+                      className="text-slate-500 hover:text-slate-700 p-1"
+                      aria-label={passwordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    >
+                      {passwordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  }
+                />
+
+
+              </div>
             </div>
 
             <Button
@@ -113,20 +132,16 @@ export default function Login() {
               {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
             </Button>
 
+            {/* Enlace de registro eliminado -- administración manual de registros */}
             <div className="text-center text-xs text-slate-500 mt-2">
-              ¿No tienes cuenta?{' '}
-              <a
-                href="/registro"
-                className="text-primary-600 hover:text-primary-700 font-medium"
-              >
-                Crea una cuenta gratis
-              </a>
+              Si necesitas una cuenta,{' '}
+              <Link to="/contacto" className="text-primary-600 hover:text-primary-700 font-medium">
+                contáctanos
+              </Link>
             </div>
 
-            
           </form>
         </div>
-
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-slate-500">

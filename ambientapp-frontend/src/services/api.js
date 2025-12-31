@@ -1,3 +1,4 @@
+// src/services/api.js
 import axios from 'axios';
 
 // Configuración base de axios
@@ -24,16 +25,13 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptor para manejar errores de autenticación
+// Nota: Quitamos aquí el manejo automático de 401 (no hacemos redirect).
+// Dejamos que el AuthContext o el interceptor específico de la UI maneje
+// los 401 para poder distinguir entre SESSION_INVALIDATED, CUENTA_EXPIRADA, etc.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token inválido o expirado
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
+    // Simplemente devolver el error para que lo maneje quien corresponda.
     return Promise.reject(error);
   }
 );

@@ -1,15 +1,17 @@
 const jwt = require('jsonwebtoken');
 
-// Generar token JWT
-const generarToken = (userId) => {
-  return jwt.sign(
-    { id: userId },
-    process.env.JWT_SECRET,
-    { expiresIn: '30d' } // Token válido por 30 días
-  );
+const generarToken = (id, sessionId = null) => {  // 👈 acepta sessionId opcional
+  const payload = { id };
+  if (sessionId) {
+    payload.sessionId = sessionId;  // 👈 incluir en el token
+  }
+
+  console.log('JWT payload generado:', payload); // 👈 DEBUG
+  return jwt.sign(payload, process.env.JWT_SECRET, {
+    expiresIn: '30d'
+  });
 };
 
-// Verificar token JWT
 const verificarToken = (token) => {
   try {
     return jwt.verify(token, process.env.JWT_SECRET);
@@ -18,7 +20,4 @@ const verificarToken = (token) => {
   }
 };
 
-module.exports = {
-  generarToken,
-  verificarToken
-};
+module.exports = { generarToken, verificarToken };
