@@ -95,7 +95,7 @@ export default function Landing() {
             descriptionText: 'Pensado para probar la plataforma y obtener una primera visión general.',
             features: [
                 { icon: <Search className="w-6 h-6" />, text: 'Hasta 4 diagnósticos mensuales' },
-                { icon: <User className="w-6 h-6" />, text: '1 usuario' },
+                { icon: <User className="w-6 h-6" />, text: 'Uso en un solo dispositivo' },
                 { icon: <BarChart3 className="w-6 h-6" />, text: 'Acceso completo a todas las dimensiones de análisis' },
                 { icon: <Lightbulb className="w-6 h-6" />, text: 'Recomendaciones básicas para una primera orientación' },
                 { icon: <Wrench className="w-6 h-6" />, text: 'Soporte estándar' }
@@ -113,7 +113,7 @@ export default function Landing() {
             descriptionText: 'La experiencia completa para equipos que necesitan análisis continuo y reportes profesionales.',
             features: [
                 { icon: <Rocket className="w-6 h-6" />, text: 'Diagnósticos ilimitados' },
-                { icon: <Users className="w-6 h-6" />, text: 'Hasta 5 usuarios' },
+                { icon: <Users className="w-6 h-6" />, text: 'Uso en múltiples dispositivos' },
                 { icon: <BarChart3 className="w-6 h-6" />, text: 'Acceso completo a todas las dimensiones' },
                 { icon: <FileText className="w-6 h-6" />, text: 'Exportación de reportes profesionales en PDF' },
                 { icon: <Brain className="w-6 h-6" />, text: 'Recomendaciones completas y accionables' },
