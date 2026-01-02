@@ -301,7 +301,16 @@ export default function Landing() {
                                     type="button"
                                     className={`w-full py-3 rounded-lg font-bold transition ${plan.ctaColor}`}
                                     aria-label={`${plan.name} plan call to action`}
-                                    onClick={() => navigate('/registro')}
+                                   onClick={() => {
+                                        // Intentamos hacer scroll suave al elemento con id="demo"
+                                        const el = document.getElementById('demo');
+                                        if (el) {
+                                            el.scrollIntoView({ behavior: 'smooth' });
+                                        } else {
+                                            // Fallback: cambia el hash (útil si el usuario viene desde otra ruta)
+                                            window.location.hash = '#demo';
+                                        }
+                                    }}
                                 >
                                     {plan.cta}
                                 </button>

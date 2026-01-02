@@ -3,7 +3,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import EmailVerificationBanner from "../EmailVerificationBanner";
 import { useAuth } from '../../context/AuthContext';
 import { LogOut, LayoutDashboard, FileText, BookOpen, Users, User, Menu } from 'lucide-react';
-import logo from '../assets/logo.svg';
+import logo from '../../assets/logo.svg';
 
 
 export default function MainLayout() {
@@ -195,11 +195,7 @@ export default function MainLayout() {
         <div className="container-app py-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-3">
-              <img
-                src="/src/assets/logo.svg"
-                alt="AmbientApp"
-                className="h-10 w-auto"
-              />
+              <img src={logo} alt="AmbientApp" className="h-12 w-auto" />
               <div className="text-sm text-slate-600">
                 © {new Date().getFullYear()} AmbientApp. Elaborado por
                 @mellamowalter.cl

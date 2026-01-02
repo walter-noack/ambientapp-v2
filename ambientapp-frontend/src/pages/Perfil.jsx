@@ -176,16 +176,16 @@ export default function Perfil() {
                     {/* Contador de días restantes */}
                     {validezTemporal?.tipo && validezTemporal.tipo !== 'ilimitado' && diasRestantes !== null && (
                         <div className={`flex items-center gap-3 border rounded-xl px-4 py-3 shadow-sm ${diasRestantes <= 3
-                                ? 'bg-red-50 border-red-200'
-                                : diasRestantes <= 7
-                                    ? 'bg-amber-50 border-amber-200'
-                                    : 'bg-blue-50 border-blue-200'
+                            ? 'bg-red-50 border-red-200'
+                            : diasRestantes <= 7
+                                ? 'bg-amber-50 border-amber-200'
+                                : 'bg-blue-50 border-blue-200'
                             }`}>
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${diasRestantes <= 3
-                                    ? 'bg-red-100'
-                                    : diasRestantes <= 7
-                                        ? 'bg-amber-100'
-                                        : 'bg-blue-100'
+                                ? 'bg-red-100'
+                                : diasRestantes <= 7
+                                    ? 'bg-amber-100'
+                                    : 'bg-blue-100'
                                 }`}>
                                 {diasRestantes <= 3 ? (
                                     <AlertCircle className={`w-5 h-5 ${diasRestantes <= 3 ? 'text-red-600' : 'text-amber-600'}`} />
@@ -198,10 +198,10 @@ export default function Perfil() {
                                     Validez de cuenta
                                 </span>
                                 <span className={`text-sm font-semibold ${diasRestantes <= 3
-                                        ? 'text-red-700'
-                                        : diasRestantes <= 7
-                                            ? 'text-amber-700'
-                                            : 'text-blue-700'
+                                    ? 'text-red-700'
+                                    : diasRestantes <= 7
+                                        ? 'text-amber-700'
+                                        : 'text-blue-700'
                                     }`}>
                                     {diasRestantes === 0
                                         ? 'Expirada'
@@ -282,13 +282,19 @@ export default function Perfil() {
                                 enabled={!!features.exportarPDF}
                                 hint={isPro ? '' : 'Disponible en Plan Pro'}
                             />
+
+                            <FeatureRow
+                                label="Diagnósticos ilimitados"
+                                enabled={!!features.exportarPDF}
+                                hint={isPro ? '' : 'Disponible en Plan Pro'}
+                            />
                             <FeatureRow
                                 label="Recomendaciones completas"
                                 enabled={!!features.recomendacionesCompletas}
                                 hint={isPro ? '' : 'Disponible en Plan Pro'}
                             />
                             <FeatureRow
-                                label="Evolución temporal"
+                                label="Uso en múltiples dispositivos"
                                 enabled={!!features.evolucionTemporal}
                                 hint={isPro ? '' : 'Disponible en Plan Pro'}
                             />
@@ -351,22 +357,7 @@ export default function Perfil() {
                             )}
                         </div>
 
-                        {/* Usuarios en la cuenta (si aplica) */}
-                        {typeof maxUsuarios === 'number' && (
-                            <div className="pt-2 border-t border-dashed border-slate-200 mt-2 space-y-1">
-                                <div className="flex justify-between text-xs text-slate-500">
-                                    <span>Usuarios de la cuenta</span>
-                                    <span>
-                                        {usuariosActuales ?? 1} / {maxUsuarios}
-                                    </span>
-                                </div>
-                                <div className="text-[11px] text-slate-500">
-                                    {isPro
-                                        ? 'Plan Pro: hasta 5 usuarios.'
-                                        : 'Plan Free: 1 usuario.'}
-                                </div>
-                            </div>
-                        )}
+                        x
                     </div>
 
                     {/* Card Upgrade */}
