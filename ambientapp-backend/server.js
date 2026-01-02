@@ -9,14 +9,6 @@ const contactRoutes = require('./src/routes/contact');
 // Inicializar app
 const app = express();
 
-// Middleware para loguear todas las peticiones (incluye OPTIONS)
-app.use((req, res, next) => {
-  console.log(`Petición recibida: ${req.method} ${req.originalUrl}`);
-  next();
-});
-
-console.log('🔥 Backend arrancado con configuración CORS actualizada');
-
 // Construir lista de orígenes permitidos para CORS
 const buildAllowedOrigins = () => {
   const origins = new Set();
@@ -51,45 +43,44 @@ const buildAllowedOrigins = () => {
 
 const allowedOrigins = buildAllowedOrigins();
 
-// Configuración CORS con función dinámica para origin
-app.use(cors({
-  origin: true, // permite todos los orígenes
-  credentials: true,
-}));
-
-app.use((err, req, res, next) => {
-  if (err.message === 'CORS_NOT_ALLOWED') {
-    return res.status(403).json({ success: false, message: 'Origen no permitido por CORS' });
-  }
-  next(err);
-});
-
-// ---- INICIO BLOQUE DEBUG CORS (temporal) ----
+// Middleware para loguear todas las peticiones (incluye OPTIONS)
 app.use((req, res, next) => {
   console.log(`Petición recibida: ${req.method} ${req.originalUrl} - Origin: ${req.get('Origin')}`);
   next();
 });
 
-// Responder OPTIONS globalmente con cabeceras para debug (no usar en prod)
-app.options('/*', (req, res) => {
-  const origin = req.get('Origin') || '*';
-  res.setHeader('Access-Control-Allow-Origin', origin === 'null' ? '*' : origin);
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  return res.status(200).end();
+// Configuración CORS con función dinámica para origin
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // permitir sin origin (Postman, curl)
+    if (allowedOrigins.includes(origin)) {
+      callback(null, origin);
+    } else {
+      // No lanzar error, solo rechazar origen
+      callback(null, false);
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
+
+// Middleware para manejar OPTIONS y responder con CORS
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    cors(corsOptions)(req, res, next);
+  } else {
+    next();
+  }
 });
 
 // Ruta test para validar CORS
-app.get('/__test_cors', (req, res) => {
+app.get('/__test_cors', cors(corsOptions), (req, res) => {
   const origin = req.get('Origin') || null;
-  res.setHeader('Access-Control-Allow-Origin', origin || '*');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.json({ ok: true, origin });
 });
-// ---- FIN BLOQUE DEBUG CORS ----
-
-
 
 // Middlewares para parsear body (JSON y urlencoded)
 app.use(express.json());
