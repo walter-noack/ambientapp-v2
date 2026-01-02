@@ -180,7 +180,7 @@ export default function Landing() {
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <button
-                            onClick={() => navigate('/registro')}
+                            onClick={() => navigate('/contacto')}
                             className="bg-white text-emerald-700 px-8 py-4 rounded-lg font-bold text-lg hover:scale-[1.02] transform transition shadow-xl"
                         >
                             Comenzar Gratis
