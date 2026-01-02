@@ -3,12 +3,14 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const morgan = require('morgan');
+const morgan = require('morgan'); // logs en dev
 const contactRoutes = require('./src/routes/contact');
 
 const app = express();
 
-// --- Construir lista de orígenes permitidos ---
+/* =========================
+   Construcción lista orígenes
+   ========================= */
 const buildAllowedOrigins = () => {
   const origins = new Set();
 
@@ -29,10 +31,11 @@ const buildAllowedOrigins = () => {
   // Añadir variantes www
   const snapshot = Array.from(origins);
   snapshot.forEach(o => {
-    if (o && o.startsWith('https://') && !o.includes('www.')) {
+    if (!o) return;
+    if (o.startsWith('https://') && !o.includes('www.')) {
       origins.add(o.replace('https://', 'https://www.'));
     }
-    if (o && o.startsWith('http://') && !o.includes('www.')) {
+    if (o.startsWith('http://') && !o.includes('www.')) {
       origins.add(o.replace('http://', 'http://www.'));
     }
   });
@@ -41,65 +44,94 @@ const buildAllowedOrigins = () => {
 };
 
 const allowedOrigins = buildAllowedOrigins();
-// Asegurarse de incluir explícitamente tu dominio (por si la env no está)
+// Asegurar dominio de frontend (por si la env var no existe)
 if (!allowedOrigins.includes('https://ambientapp.cl')) allowedOrigins.push('https://ambientapp.cl');
 if (!allowedOrigins.includes('https://www.ambientapp.cl')) allowedOrigins.push('https://www.ambientapp.cl');
 
-// --- Log de arranque rápido ---
-console.log('🔥 Backend arrancado con configuración CORS actualizada');
-console.log('Allowed origins:', allowedOrigins);
+console.log('🔥 Backend arrancado (iniciando middlewares). Allowed origins:', allowedOrigins);
 
-// --- Middleware de logging simple (early) ---
+/* =========================
+   Middleware CORS FUERTE (lo más arriba posible)
+   - Logea cada petición con Origin
+   - Si origin permitido añade headers CORS correctos (no '*')
+   - Responde a OPTIONS/preflight directamente (204) cuando origin permitido
+   - Si origin no permitido responde 403 para OPTIONS
+   ========================= */
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - Origin: ${req.get('Origin')}`);
+  const origin = req.get('Origin');
+  console.log(`[CORS CHECK] ${new Date().toISOString()} ${req.method} ${req.originalUrl} - Origin: ${origin}`);
+
+  // Si no hay Origin (postman/curl o server->server), permitir por defecto
+  if (!origin) {
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    return next();
+  }
+
+  // Si el origin está en la lista blanca, poner headers CORS correctos
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin); // IMPORTANT: exact origin when credentials used
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept');
+  } else {
+    console.log(`[CORS REJECT] Origin no permitido: ${origin}`);
+    // No añadimos header 'Access-Control-Allow-Origin'
+  }
+
+  // Manejar preflight directamente
+  if (req.method === 'OPTIONS') {
+    if (!allowedOrigins.includes(origin)) {
+      return res.status(403).end(); // origin no permitido para preflight
+    }
+    // preflight OK
+    return res.status(204).end();
+  }
+
   next();
 });
 
-// --- CORS config dinámica ---
+/* =========================
+   (Opcional) registrar cors() del paquete para compatibilidad
+   - No estrictamente necesario porque el middleware anterior cubre todo,
+     pero lo dejamos registrado por si alguna librería espera cors() instalado.
+   ========================= */
 const corsOptions = {
   origin: function (origin, callback) {
-    // Log para depuración
-    console.log('CORS check origin =>', origin);
-    if (!origin) {
-      // permitir herramientas sin Origin (curl, Postman) o same-origin server-side
-      return callback(null, true);
-    }
-    if (allowedOrigins.includes(origin)) {
-      // devolver el origen exacto (necesario si se usan credentials)
-      return callback(null, origin);
-    }
-    // Rechazar origen (no lanzar error aquí)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, origin);
     return callback(null, false);
   },
-  credentials: true,
-  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  credentials: true
 };
-
-// Registrar CORS globalmente
 app.use(cors(corsOptions));
-
-// Asegurar que las peticiones OPTIONS obtengan las cabeceras CORS
-// Usamos '/*' para evitar problemas con path-to-regexp en algunas versiones
+// Registrar handler OPTIONS para compatibilidad (usar '/*' para evitar path error)
 app.options('/*', cors(corsOptions));
 
-// Ruta test para validar CORS desde cliente o curl
-app.get('/__test_cors', cors(corsOptions), (req, res) => {
+/* =========================
+   Ruta de test para debug CORS
+   ========================= */
+app.get('/__test_cors', (req, res) => {
   const origin = req.get('Origin') || null;
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
   res.json({ ok: true, origin });
 });
 
-// --- Body parsers ---
+/* =========================
+   Middlewares normales & logging
+   ========================= */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// --- Logging adicional en dev ---
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
-// --- DB connect ---
+/* =========================
+   DB connect
+   ========================= */
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
@@ -111,12 +143,13 @@ const connectDB = async () => {
 };
 connectDB();
 
-// --- Importar rutas ---
+/* =========================
+   Rutas
+   ========================= */
 const authRoutes = require('./src/routes/authRoutes');
 const diagnosticoRoutes = require('./src/routes/diagnosticoRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
 
-// --- Root ---
 app.get('/', (req, res) => {
   res.json({
     message: '🌱 AmbientApp Backend API',
@@ -130,13 +163,14 @@ app.get('/', (req, res) => {
   });
 });
 
-// --- Montar rutas (usa prefijo /api en authRoutes) ---
 app.use('/api/auth', authRoutes);
 app.use('/api/diagnosticos', diagnosticoRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/contacto', contactRoutes);
 
-// --- Manejo de errores global (último) ---
+/* =========================
+   Manejo de errores global
+   ========================= */
 app.use((err, req, res, next) => {
   console.error('❌ Error global:', err && err.message ? err.message : err);
   if (err && err.message === 'CORS_NOT_ALLOWED') {
@@ -148,7 +182,9 @@ app.use((err, req, res, next) => {
   });
 });
 
-// --- Arranque ---
+/* =========================
+   Arranque del servidor
+   ========================= */
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
