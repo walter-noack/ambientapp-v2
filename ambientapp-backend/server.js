@@ -53,18 +53,8 @@ const allowedOrigins = buildAllowedOrigins();
 
 // Configuración CORS con función dinámica para origin
 app.use(cors({
-  origin: function (origin, callback) {
-    console.log('CORS origin:', origin);
-    if (!origin) return callback(null, true); // permitir sin origin (Postman, curl)
-    if (allowedOrigins.includes(origin)) {
-      callback(null, origin);
-    } else {
-      callback(null, false);
-    }
-  },
+  origin: true, // permite todos los orígenes
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use((err, req, res, next) => {
