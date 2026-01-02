@@ -20,3 +20,12 @@ export const resendVerification = (payload) => {
   // payload puede ser { email } o { userId } según lo implementado en backend
   return api.post('/auth/resend-verification', payload);
 };
+
+// Cambiar contraseña del usuario
+export const changePassword = async (currentPassword, newPassword) => {
+  const response = await api.put('/auth/change-password', {
+    currentPassword,
+    newPassword
+  });
+  return response.data;
+};

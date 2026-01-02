@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProfile } from '../services/authApi';
 import { useAuth } from '../context/AuthContext';
-import { Crown, Info, Sparkles, Clock, AlertCircle } from 'lucide-react';
+import { Crown, Info, Sparkles, Clock, AlertCircle, Key } from 'lucide-react';
+import ChangePasswordForm from '../components/ChangePasswordForm';
 
 export default function Perfil() {
     const navigate = useNavigate();
@@ -357,7 +358,7 @@ export default function Perfil() {
                             )}
                         </div>
 
-                        x
+                        
                     </div>
 
                     {/* Card Upgrade */}

@@ -10,7 +10,8 @@ const {
   verifyEmail,
   resendVerification,
   forgotPassword,
-  resetPassword
+  resetPassword, 
+  changePassword
 } = require('../controllers/authController');
 
 const { protegerRuta } = require('../middleware/auth');
@@ -34,5 +35,8 @@ router.post('/reset-password', resetPassword);
 router.get('/me', protegerRuta, obtenerUsuarioActual);
 router.get('/profile', protegerRuta, obtenerPerfil);
 router.put('/profile', protegerRuta, actualizarPerfil);
+
+// Ruta para cambiar contraseña (protegida)
+router.put('/change-password', protegerRuta, changePassword);
 
 module.exports = router;

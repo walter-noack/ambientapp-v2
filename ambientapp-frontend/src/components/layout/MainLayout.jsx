@@ -1,20 +1,44 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import EmailVerificationBanner from "../EmailVerificationBanner";
 import { useAuth } from '../../context/AuthContext';
 import { LogOut, LayoutDashboard, FileText, BookOpen, Users, User, Menu } from 'lucide-react';
 import logo from '../../assets/logo.svg';
-
+import ChangePasswordForm from '../ChangePasswordForm';
 
 export default function MainLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const userMenuRef = useRef();
+
+  // Cerrar menú al hacer click fuera
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setUserMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const handlePerfilClick = () => {
+    setUserMenuOpen(false);
+    navigate('/perfil');
+  };
+
+  const handleChangePasswordClick = () => {
+    setUserMenuOpen(false);
+    setShowChangePasswordModal(true);
   };
 
   const isActive = (path) => {
@@ -30,6 +54,13 @@ export default function MainLayout() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
+      {/* Modal de cambio de contraseña */}
+      {showChangePasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <ChangePasswordForm onClose={() => setShowChangePasswordModal(false)} />
+        </div>
+      )}
+
       {/* NAVBAR */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="container-app">
@@ -73,27 +104,48 @@ export default function MainLayout() {
 
             {/* User Menu + Hamburger */}
             <div className="flex items-center gap-3">
-              {/* Enlace al perfil - Desktop */}
-              <Link
-                to="/perfil"
-                className="hidden md:flex items-center gap-2 text-sm hover:bg-slate-100 px-2 py-1.5 rounded-lg transition-colors"
-              >
-                <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-                  <span className="text-primary-700 font-semibold text-sm">
-                    {user?.email?.[0]?.toUpperCase() || 'U'}
-                  </span>
-                </div>
-                <div className="flex flex-col items-start">
-                  <span className="font-medium text-slate-700">
-                    {user?.email}
-                  </span>
-                  {user?.role === 'admin' && (
-                    <span className="text-xs text-purple-600 font-medium">
-                      Admin
+              {/* Menú desplegable de usuario - Desktop */}
+              <div className="relative hidden md:block" ref={userMenuRef}>
+                <button
+                  onClick={() => setUserMenuOpen(prev => !prev)}
+                  className="flex items-center gap-2 text-sm hover:bg-slate-100 px-2 py-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  aria-haspopup="true"
+                  aria-expanded={userMenuOpen}
+                >
+                  <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
+                    <span className="text-primary-700 font-semibold text-sm">
+                      {user?.email?.[0]?.toUpperCase() || 'U'}
                     </span>
-                  )}
-                </div>
-              </Link>
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium text-slate-700">
+                      {user?.email}
+                    </span>
+                    {user?.role === 'admin' && (
+                      <span className="text-xs text-purple-600 font-medium">
+                        Admin
+                      </span>
+                    )}
+                  </div>
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                    <button
+                      onClick={handlePerfilClick}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Perfil
+                    </button>
+                    <button
+                      onClick={handleChangePasswordClick}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Cambiar contraseña
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* Botón perfil mobile */}
               <Link
@@ -187,7 +239,6 @@ export default function MainLayout() {
         {/* BANNER DE VERIFICACIÓN */}
         <EmailVerificationBanner />
         <Outlet />
-
       </main>
 
       {/* FOOTER */}
