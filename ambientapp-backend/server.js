@@ -92,22 +92,7 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    // Si origin permitido, responder con headers CORS y 204
-    const origin = req.get('Origin');
-    if (origin && allowedOrigins.includes(origin)) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept');
-      return res.sendStatus(204);
-    }
-    // Si origin no permitido, responder 403
-    return res.sendStatus(403);
-  }
-  next();
-});
+// **Eliminado app.options() para evitar error path-to-regexp**
 
 /* =========================
    Ruta de test para debug CORS
