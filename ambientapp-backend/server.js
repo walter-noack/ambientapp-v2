@@ -71,7 +71,7 @@ app.use((req, res, next) => {
 });
 
 // Responder OPTIONS globalmente con cabeceras para debug (no usar en prod)
-app.options('*', (req, res) => {
+app.options('/*', (req, res) => {
   const origin = req.get('Origin') || '*';
   res.setHeader('Access-Control-Allow-Origin', origin === 'null' ? '*' : origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
