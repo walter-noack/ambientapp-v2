@@ -1,15 +1,14 @@
-// Importar dependencias
+// server.js
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const morgan = require('morgan'); // opcional, para logs más limpios
+const morgan = require('morgan');
 const contactRoutes = require('./src/routes/contact');
 
-// Inicializar app
 const app = express();
 
-// Construir lista de orígenes permitidos para CORS
+// --- Construir lista de orígenes permitidos ---
 const buildAllowedOrigins = () => {
   const origins = new Set();
 
@@ -42,56 +41,65 @@ const buildAllowedOrigins = () => {
 };
 
 const allowedOrigins = buildAllowedOrigins();
+// Asegurarse de incluir explícitamente tu dominio (por si la env no está)
+if (!allowedOrigins.includes('https://ambientapp.cl')) allowedOrigins.push('https://ambientapp.cl');
+if (!allowedOrigins.includes('https://www.ambientapp.cl')) allowedOrigins.push('https://www.ambientapp.cl');
 
-// Middleware para loguear todas las peticiones (incluye OPTIONS)
+// --- Log de arranque rápido ---
+console.log('🔥 Backend arrancado con configuración CORS actualizada');
+console.log('Allowed origins:', allowedOrigins);
+
+// --- Middleware de logging simple (early) ---
 app.use((req, res, next) => {
-  console.log(`Petición recibida: ${req.method} ${req.originalUrl} - Origin: ${req.get('Origin')}`);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - Origin: ${req.get('Origin')}`);
   next();
 });
 
-// Configuración CORS con función dinámica para origin
+// --- CORS config dinámica ---
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // permitir sin origin (Postman, curl)
-    if (allowedOrigins.includes(origin)) {
-      callback(null, origin);
-    } else {
-      // No lanzar error, solo rechazar origen
-      callback(null, false);
+    // Log para depuración
+    console.log('CORS check origin =>', origin);
+    if (!origin) {
+      // permitir herramientas sin Origin (curl, Postman) o same-origin server-side
+      return callback(null, true);
     }
+    if (allowedOrigins.includes(origin)) {
+      // devolver el origen exacto (necesario si se usan credentials)
+      return callback(null, origin);
+    }
+    // Rechazar origen (no lanzar error aquí)
+    return callback(null, false);
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
 };
 
+// Registrar CORS globalmente
 app.use(cors(corsOptions));
 
-// Middleware para manejar OPTIONS y responder con CORS
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    cors(corsOptions)(req, res, next);
-  } else {
-    next();
-  }
-});
+// Asegurar que las peticiones OPTIONS obtengan las cabeceras CORS
+// Usamos '/*' para evitar problemas con path-to-regexp en algunas versiones
+app.options('/*', cors(corsOptions));
 
-// Ruta test para validar CORS
+// Ruta test para validar CORS desde cliente o curl
 app.get('/__test_cors', cors(corsOptions), (req, res) => {
   const origin = req.get('Origin') || null;
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.json({ ok: true, origin });
 });
 
-// Middlewares para parsear body (JSON y urlencoded)
+// --- Body parsers ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Middleware de logging (solo en dev)
+// --- Logging adicional en dev ---
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
-// Conectar a MongoDB
+// --- DB connect ---
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
@@ -101,15 +109,14 @@ const connectDB = async () => {
     process.exit(1);
   }
 };
-
 connectDB();
 
-// Importar rutas
+// --- Importar rutas ---
 const authRoutes = require('./src/routes/authRoutes');
 const diagnosticoRoutes = require('./src/routes/diagnosticoRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
 
-// Ruta raíz
+// --- Root ---
 app.get('/', (req, res) => {
   res.json({
     message: '🌱 AmbientApp Backend API',
@@ -123,43 +130,27 @@ app.get('/', (req, res) => {
   });
 });
 
-// Montar rutas
+// --- Montar rutas (usa prefijo /api en authRoutes) ---
 app.use('/api/auth', authRoutes);
 app.use('/api/diagnosticos', diagnosticoRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/contacto', contactRoutes);
 
-// Manejo de errores global
+// --- Manejo de errores global (último) ---
 app.use((err, req, res, next) => {
-  console.error('❌ Error:', err);
-  res.status(err.status || 500).json({
+  console.error('❌ Error global:', err && err.message ? err.message : err);
+  if (err && err.message === 'CORS_NOT_ALLOWED') {
+    return res.status(403).json({ success: false, message: 'Origen no permitido por CORS' });
+  }
+  res.status(err && err.status ? err.status : 500).json({
     success: false,
-    message: err.message || 'Error del servidor'
+    message: err && err.message ? err.message : 'Error del servidor'
   });
 });
 
-// Puerto
+// --- Arranque ---
 const PORT = process.env.PORT || 5001;
-
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
   console.log(`📍 Entorno: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`📋 Endpoints disponibles:`);
-  console.log(`   - GET  /`);
-  console.log(`   - POST /api/auth/registro`);
-  console.log(`   - POST /api/auth/login`);
-  console.log(`   - GET  /api/auth/me`);
-  console.log(`   - GET  /api/auth/profile`);
-  console.log(`   - PUT  /api/auth/profile`);
-  console.log(`   - POST /api/diagnosticos`);
-  console.log(`   - GET  /api/diagnosticos`);
-  console.log(`   - GET  /api/diagnosticos/:id`);
-  console.log(`   - PUT  /api/diagnosticos/:id`);
-  console.log(`   - DELETE /api/diagnosticos/:id`);
-  console.log(`   - GET  /api/diagnosticos/estadisticas`);
-  console.log(`   - GET  /api/admin/users`);
-  console.log(`   - GET  /api/admin/users/:id`);
-  console.log(`   - PUT  /api/admin/users/:id`);
-  console.log(`   - DELETE /api/admin/users/:id`);
-  console.log(`   - GET  /api/admin/stats`);
 });
