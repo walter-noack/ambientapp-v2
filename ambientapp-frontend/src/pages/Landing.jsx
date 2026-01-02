@@ -240,13 +240,7 @@ export default function Landing() {
                                 <h3 className="text-xl font-semibold text-gray-800 mb-3">Beneficio inmediato</h3>
                                 <p className="text-gray-600 mb-4">Reduce tiempo de diagnóstico y obtén recomendaciones claras para mejorar tu desempeño ambiental.</p>
                                 <div className="flex gap-3">
-                                    <button
-                                        onClick={() => navigate('/registro')}
-                                        className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-700 transition"
-                                    >
-                                        Crear cuenta
-                                    </button>
-                                    <a href="#demo" className="border border-emerald-200 px-4 py-2 rounded-lg text-emerald-700 hover:bg-emerald-50 transition">
+                                    <a href="#demo" className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-700 transition">
                                         Solicitar demo
                                     </a>
                                 </div>
