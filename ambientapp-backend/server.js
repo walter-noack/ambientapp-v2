@@ -67,6 +67,33 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// ---- INICIO BLOQUE DEBUG CORS (temporal) ----
+app.use((req, res, next) => {
+  console.log(`Petición recibida: ${req.method} ${req.originalUrl} - Origin: ${req.get('Origin')}`);
+  next();
+});
+
+// Responder OPTIONS globalmente con cabeceras para debug (no usar en prod)
+app.options('*', (req, res) => {
+  const origin = req.get('Origin') || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin === 'null' ? '*' : origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  return res.status(200).end();
+});
+
+// Ruta test para validar CORS
+app.get('/__test_cors', (req, res) => {
+  const origin = req.get('Origin') || null;
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.json({ ok: true, origin });
+});
+// ---- FIN BLOQUE DEBUG CORS ----
+
+
+
 // Middlewares para parsear body (JSON y urlencoded)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
