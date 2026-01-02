@@ -7,6 +7,7 @@ import { exportarComponenteAPDF } from '../utils/exportarPDF';
 import InformePDF from '../components/pdf/InformePDF';
 import { useAuth } from "../context/AuthContext";
 
+
 // Componentes de secciones
 import { SeccionPortada } from "../components/detalle/SeccionPortada";
 import { SeccionResumen } from "../components/detalle/SeccionResumen";

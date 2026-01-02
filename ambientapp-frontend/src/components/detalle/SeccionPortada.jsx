@@ -1,13 +1,15 @@
 import { Award, Calendar, Building2, Leaf } from 'lucide-react';
+import logo from '../../assets/logo.svg';
+
 
 export function SeccionPortada({ evaluacion }) {
   // Obtener puntuación del backend
   const finalScore = evaluacion?.puntuacionGeneral || 0;
   const nivelBackend = evaluacion?.nivelDesempeno || 'Bajo';
-  
+
   // Construir período del backend
   const period = `${evaluacion?.semestre || 'S1'}-${evaluacion?.anio || new Date().getFullYear()}`;
-  
+
   // Determinar nivel y color
   let nivel = nivelBackend;
   let colorNivel = "#DC2626"; // Rojo por defecto (Bajo)
@@ -67,11 +69,7 @@ export function SeccionPortada({ evaluacion }) {
 
         {/* Logo */}
         <div className="mb-8">
-          <img
-            src="/src/assets/logo.svg"
-            alt="AmbientApp"
-            className="h-16 w-auto"
-          />
+          <img src={logo} alt="AmbientApp" className="h-16 w-auto" />
         </div>
 
         {/* Título principal */}

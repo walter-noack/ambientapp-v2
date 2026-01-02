@@ -48,11 +48,11 @@ const crearUsuarioAdmin = async (req, res) => {
       });
     }
 
-    // No hacer hash manual aquí: el pre('save') del modelo se encarga.
+    // Crear usuario
     const nuevoUsuario = await User.create({
       nombre,
       email,
-      password, // en claro: el schema lo hashea en pre('save')
+      password, // el schema lo hashea en pre('save')
       empresa,
       rut,
       telefono,
@@ -61,12 +61,17 @@ const crearUsuarioAdmin = async (req, res) => {
       estadoSuscripcion
     });
 
+    // Si el usuario es Pro, actualizar features
+    if (tipoSuscripcion === 'pro') {
+      await nuevoUsuario.actualizarAPro();
+    }
+
     // Establecer validez temporal si se especifica
     if (validezTemporalTipo && validezTemporalTipo !== 'ilimitado') {
       nuevoUsuario.establecerValidezTemporal(validezTemporalTipo);
     }
 
-    // Opcional: verificar/resetear límites si tu modelo lo necesita
+    // Verificar/resetear límites si el método existe
     if (typeof nuevoUsuario.verificarYResetearLimites === 'function') {
       nuevoUsuario.verificarYResetearLimites();
       await nuevoUsuario.save();
@@ -80,7 +85,7 @@ const crearUsuarioAdmin = async (req, res) => {
           ...nuevoUsuario.toObject(),
           password: undefined,
           planInfo: nuevoUsuario.planInfo,
-          isVerified: nuevoUsuario.emailVerificado // exponer compatibilidad
+          isVerified: nuevoUsuario.emailVerificado
         }
       }
     });
@@ -269,18 +274,18 @@ const actualizarUsuario = async (req, res) => {
       if (tipoSuscripcion === 'pro' && usuario.tipoSuscripcion !== 'pro') {
         // Upgrade a Pro
         await usuario.actualizarAPro();
+      } else if (tipoSuscripcion === 'free' && usuario.tipoSuscripcion !== 'free') {
+        // Downgrade a Free
+        usuario.tipoSuscripcion = 'free';
+        usuario.limites.diagnosticosMes = 4;
+        usuario.limites.maxUsuarios = 1;
+        usuario.features.exportarPDF = false;
+        usuario.features.recomendacionesCompletas = false;
+        usuario.features.evolucionTemporal = false;
+        usuario.features.soportePrioritario = false;
       } else {
+        // Solo cambiar tipoSuscripcion si no es upgrade/downgrade
         usuario.tipoSuscripcion = tipoSuscripcion;
-
-        // Si downgrade a Free, restaurar límites
-        if (tipoSuscripcion === 'free') {
-          usuario.limites.diagnosticosMes = 4;
-          usuario.limites.maxUsuarios = 1;
-          usuario.features.exportarPDF = false;
-          usuario.features.recomendacionesCompletas = false;
-          usuario.features.evolucionTemporal = false;
-          usuario.features.soportePrioritario = false;
-        }
       }
     }
 
@@ -288,7 +293,6 @@ const actualizarUsuario = async (req, res) => {
       usuario.estadoSuscripcion = estadoSuscripcion;
     }
 
-    // Actualizar validez temporal si se especifica
     if (validezTemporalTipo !== undefined) {
       if (validezTemporalTipo === 'ilimitado') {
         usuario.validezTemporal.tipo = 'ilimitado';
@@ -307,11 +311,9 @@ const actualizarUsuario = async (req, res) => {
       usuario.features = { ...usuario.features, ...features };
     }
 
-    // Manejar verificación (mapear isVerified => emailVerificado)
     if (typeof isVerified !== 'undefined') {
       usuario.emailVerificado = !!isVerified;
       if (!usuario.emailVerificado) {
-        // si se desverifica, también limpiar token
         usuario.verificationToken = undefined;
         usuario.verificationTokenExpires = undefined;
       }
@@ -330,7 +332,6 @@ const actualizarUsuario = async (req, res) => {
         }
       }
     });
-
   } catch (error) {
     console.error('Error al actualizar usuario:', error);
     res.status(500).json({
