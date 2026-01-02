@@ -8,7 +8,9 @@ const contactRoutes = require('./src/routes/contact');
 
 const app = express();
 
-// Construcción lista orígenes permitidos
+/* =========================
+   Construcción lista orígenes
+   ========================= */
 const buildAllowedOrigins = () => {
   const origins = new Set();
 
@@ -26,7 +28,6 @@ const buildAllowedOrigins = () => {
     origins.add('http://localhost:3000');
   }
 
-  // Añadir variantes www
   const snapshot = Array.from(origins);
   snapshot.forEach(o => {
     if (!o) return;
@@ -45,43 +46,82 @@ const allowedOrigins = buildAllowedOrigins();
 if (!allowedOrigins.includes('https://ambientapp.cl')) allowedOrigins.push('https://ambientapp.cl');
 if (!allowedOrigins.includes('https://www.ambientapp.cl')) allowedOrigins.push('https://www.ambientapp.cl');
 
-console.log('🔥 Backend arrancado. Allowed origins:', allowedOrigins);
+console.log('🔥 Backend arrancado (iniciando middlewares). Allowed origins:', allowedOrigins);
 
-// Middleware para loguear peticiones
+/* =========================
+   Middleware CORS FUERTE (lo más arriba posible)
+   ========================= */
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - Origin: ${req.get('Origin')}`);
+  const origin = req.get('Origin');
+  console.log(`[CORS CHECK] ${new Date().toISOString()} ${req.method} ${req.originalUrl} - Origin: ${origin}`);
+
+  if (!origin) {
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    return next();
+  }
+
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept');
+  } else {
+    console.log(`[CORS REJECT] Origin no permitido: ${origin}`);
+  }
+
+  if (req.method === 'OPTIONS') {
+    if (!allowedOrigins.includes(origin)) {
+      return res.status(403).end();
+    }
+    return res.status(204).end();
+  }
+
   next();
 });
 
-// Configuración CORS
+/* =========================
+   Registrar cors() por compatibilidad
+   ========================= */
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, origin);
     return callback(null, false);
   },
-  credentials: true,
-  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  credentials: true
 };
-
 app.use(cors(corsOptions));
 
-// Manejo explícito de OPTIONS para todas las rutas con CORS
-app.options('*', cors(corsOptions), (req, res) => {
+// IMPORTANT: usar '/*' en vez de '*' para evitar path-to-regexp error
+app.options('/*', cors(corsOptions), (req, res) => {
   res.sendStatus(204);
 });
 
-// Middlewares para parsear body
+/* =========================
+   Ruta de test para debug CORS
+   ========================= */
+app.get('/__test_cors', (req, res) => {
+  const origin = req.get('Origin') || null;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  res.json({ ok: true, origin });
+});
+
+/* =========================
+   Body parsers y logging
+   ========================= */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Logging en desarrollo
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
-// Conexión a MongoDB
+/* =========================
+   DB connect
+   ========================= */
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
@@ -93,12 +133,13 @@ const connectDB = async () => {
 };
 connectDB();
 
-// Importar rutas
+/* =========================
+   Rutas
+   ========================= */
 const authRoutes = require('./src/routes/authRoutes');
 const diagnosticoRoutes = require('./src/routes/diagnosticoRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
 
-// Ruta raíz
 app.get('/', (req, res) => {
   res.json({
     message: '🌱 AmbientApp Backend API',
@@ -107,18 +148,19 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       diagnosticos: '/api/diagnosticos',
-      admin: '/api/admin',
-    },
+      admin: '/api/admin'
+    }
   });
 });
 
-// Montar rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/diagnosticos', diagnosticoRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/contacto', contactRoutes);
 
-// Manejo global de errores
+/* =========================
+   Manejo de errores global
+   ========================= */
 app.use((err, req, res, next) => {
   console.error('❌ Error global:', err && err.message ? err.message : err);
   if (err && err.message === 'CORS_NOT_ALLOWED') {
@@ -126,11 +168,13 @@ app.use((err, req, res, next) => {
   }
   res.status(err && err.status ? err.status : 500).json({
     success: false,
-    message: err && err.message ? err.message : 'Error del servidor',
+    message: err && err.message ? err.message : 'Error del servidor'
   });
 });
 
-// Arranque del servidor
+/* =========================
+   Arranque
+   ========================= */
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
