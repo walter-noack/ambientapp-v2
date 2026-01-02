@@ -3,14 +3,12 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const morgan = require('morgan'); // logs en dev
+const morgan = require('morgan');
 const contactRoutes = require('./src/routes/contact');
 
 const app = express();
 
-/* =========================
-   Construcción lista orígenes
-   ========================= */
+// Construcción lista orígenes permitidos
 const buildAllowedOrigins = () => {
   const origins = new Set();
 
@@ -44,94 +42,46 @@ const buildAllowedOrigins = () => {
 };
 
 const allowedOrigins = buildAllowedOrigins();
-// Asegurar dominio de frontend (por si la env var no existe)
 if (!allowedOrigins.includes('https://ambientapp.cl')) allowedOrigins.push('https://ambientapp.cl');
 if (!allowedOrigins.includes('https://www.ambientapp.cl')) allowedOrigins.push('https://www.ambientapp.cl');
 
-console.log('🔥 Backend arrancado (iniciando middlewares). Allowed origins:', allowedOrigins);
+console.log('🔥 Backend arrancado. Allowed origins:', allowedOrigins);
 
-/* =========================
-   Middleware CORS FUERTE (lo más arriba posible)
-   - Logea cada petición con Origin
-   - Si origin permitido añade headers CORS correctos (no '*')
-   - Responde a OPTIONS/preflight directamente (204) cuando origin permitido
-   - Si origin no permitido responde 403 para OPTIONS
-   ========================= */
+// Middleware para loguear peticiones
 app.use((req, res, next) => {
-  const origin = req.get('Origin');
-  console.log(`[CORS CHECK] ${new Date().toISOString()} ${req.method} ${req.originalUrl} - Origin: ${origin}`);
-
-  // Si no hay Origin (postman/curl o server->server), permitir por defecto
-  if (!origin) {
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    return next();
-  }
-
-  // Si el origin está en la lista blanca, poner headers CORS correctos
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin); // IMPORTANT: exact origin when credentials used
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept');
-  } else {
-    console.log(`[CORS REJECT] Origin no permitido: ${origin}`);
-    // No añadimos header 'Access-Control-Allow-Origin'
-  }
-
-  // Manejar preflight directamente
-  if (req.method === 'OPTIONS') {
-    if (!allowedOrigins.includes(origin)) {
-      return res.status(403).end(); // origin no permitido para preflight
-    }
-    // preflight OK
-    return res.status(204).end();
-  }
-
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - Origin: ${req.get('Origin')}`);
   next();
 });
 
-/* =========================
-   (Opcional) registrar cors() del paquete para compatibilidad
-   - No estrictamente necesario porque el middleware anterior cubre todo,
-     pero lo dejamos registrado por si alguna librería espera cors() instalado.
-   ========================= */
+// Configuración CORS
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, origin);
     return callback(null, false);
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
 };
-app.use(cors(corsOptions));
-// Registrar handler OPTIONS para compatibilidad (usar '/*' para evitar path error)
-app.options('/*', cors(corsOptions));
 
-/* =========================
-   Ruta de test para debug CORS
-   ========================= */
-app.get('/__test_cors', (req, res) => {
-  const origin = req.get('Origin') || null;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
-  res.json({ ok: true, origin });
+app.use(cors(corsOptions));
+
+// Manejo explícito de OPTIONS para todas las rutas con CORS
+app.options('*', cors(corsOptions), (req, res) => {
+  res.sendStatus(204);
 });
 
-/* =========================
-   Middlewares normales & logging
-   ========================= */
+// Middlewares para parsear body
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Logging en desarrollo
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
 
-/* =========================
-   DB connect
-   ========================= */
+// Conexión a MongoDB
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
@@ -143,13 +93,12 @@ const connectDB = async () => {
 };
 connectDB();
 
-/* =========================
-   Rutas
-   ========================= */
+// Importar rutas
 const authRoutes = require('./src/routes/authRoutes');
 const diagnosticoRoutes = require('./src/routes/diagnosticoRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
 
+// Ruta raíz
 app.get('/', (req, res) => {
   res.json({
     message: '🌱 AmbientApp Backend API',
@@ -158,19 +107,18 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       diagnosticos: '/api/diagnosticos',
-      admin: '/api/admin'
-    }
+      admin: '/api/admin',
+    },
   });
 });
 
+// Montar rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/diagnosticos', diagnosticoRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/contacto', contactRoutes);
 
-/* =========================
-   Manejo de errores global
-   ========================= */
+// Manejo global de errores
 app.use((err, req, res, next) => {
   console.error('❌ Error global:', err && err.message ? err.message : err);
   if (err && err.message === 'CORS_NOT_ALLOWED') {
@@ -178,13 +126,11 @@ app.use((err, req, res, next) => {
   }
   res.status(err && err.status ? err.status : 500).json({
     success: false,
-    message: err && err.message ? err.message : 'Error del servidor'
+    message: err && err.message ? err.message : 'Error del servidor',
   });
 });
 
-/* =========================
-   Arranque del servidor
-   ========================= */
+// Arranque del servidor
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
