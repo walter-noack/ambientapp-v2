@@ -59,13 +59,20 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       callback(null, origin);
     } else {
-      callback(new Error('CORS_NOT_ALLOWED'));
+      callback(null, false);
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+app.use((err, req, res, next) => {
+  if (err.message === 'CORS_NOT_ALLOWED') {
+    return res.status(403).json({ success: false, message: 'Origen no permitido por CORS' });
+  }
+  next(err);
+});
 
 // ---- INICIO BLOQUE DEBUG CORS (temporal) ----
 app.use((req, res, next) => {
