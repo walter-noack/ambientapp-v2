@@ -100,7 +100,7 @@ export default function Registro() {
             Crea tu cuenta en AmbientApp
           </h1>
           <p className="text-slate-600 text-sm">
-            Comienza con el plan Free: 4 diagnósticos mensuales.
+            Comienza con el plan Free: 3 diagnósticos mensuales.
           </p>
         </div>
 

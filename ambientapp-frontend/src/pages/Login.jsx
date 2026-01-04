@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/shared/ui/Button';
 import { Input } from '../components/shared/ui/Input';
 import { Alert } from '../components/shared/ui/Alert';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -65,7 +65,16 @@ export default function Login() {
         </div>
 
         {/* Formulario */}
-        <div className="card p-8">
+        <div className="card p-8 relative">
+          {/* Loading Overlay */}
+          {loading && (
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center z-10">
+              <Loader2 className="w-12 h-12 text-primary-600 animate-spin mb-3" />
+              <p className="text-sm font-medium text-slate-700">Iniciando sesión...</p>
+              <p className="text-xs text-slate-500 mt-1">Por favor espera</p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
 
             {/* Error Alert */}
@@ -126,9 +135,10 @@ export default function Login() {
             <Button
               type="submit"
               variant="primary"
-              className="w-full"
+              className="w-full flex items-center justify-center gap-2"
               disabled={loading}
             >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
             </Button>
 

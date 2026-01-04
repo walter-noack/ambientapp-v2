@@ -94,7 +94,7 @@ export default function Landing() {
             descriptionTitle: 'Para conocer la herramienta y hacer diagnósticos puntuales',
             descriptionText: 'Pensado para probar la plataforma y obtener una primera visión general.',
             features: [
-                { icon: <Search className="w-6 h-6" />, text: 'Hasta 4 diagnósticos mensuales' },
+                { icon: <Search className="w-6 h-6" />, text: 'Hasta 3 diagnósticos mensuales' },
                 { icon: <User className="w-6 h-6" />, text: 'Uso en un solo dispositivo' },
                 { icon: <BarChart3 className="w-6 h-6" />, text: 'Acceso completo a todas las dimensiones de análisis' },
                 { icon: <Lightbulb className="w-6 h-6" />, text: 'Recomendaciones básicas para una primera orientación' },

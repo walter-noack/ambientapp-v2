@@ -30,7 +30,7 @@ export default function Dashboard() {
 
   // Datos de plan desde planInfo
   const planInfo = user?.planInfo || {};
-  const diagnosticosTotales = planInfo.diagnosticosTotales ?? 0;      // p.ej. 4
+  const diagnosticosTotales = planInfo.diagnosticosTotales ?? 0;      // p.ej. 3
   const diagnosticosRestantes = planInfo.diagnosticosRestantes ?? 0;  // p.ej. 2
 
   // Diagnósticos ya usados = totales - restantes (si tenemos ambos)

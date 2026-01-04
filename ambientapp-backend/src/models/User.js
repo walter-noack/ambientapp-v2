@@ -87,7 +87,7 @@ const userSchema = new mongoose.Schema({
   limites: {
     diagnosticosMes: {
       type: Number,
-      default: 4
+      default: 3
     },
     diagnosticosRealizados: {
       type: Number,
@@ -389,7 +389,7 @@ userSchema.virtual('planInfo').get(function() {
     diagnosticosRestantes: diagnosticosRestantes,
     usuariosRestantes: 0,
     caracteristicas: [
-      '4 diagnósticos mensuales',
+      '3 diagnósticos mensuales',
       '1 solo usuario',
       'Acceso a todas las dimensiones',
       'No permite exportar PDF',

@@ -23,7 +23,7 @@ export default function ListaEvaluaciones() {
   const isPro = tipoSuscripcion === "pro";
 
   const planInfo = user?.planInfo || {};
-  const diagnosticosTotales = planInfo.diagnosticosTotales ?? 0;      // ej: 4
+  const diagnosticosTotales = planInfo.diagnosticosTotales ?? 0;      // ej: 3
   const diagnosticosRestantes = planInfo.diagnosticosRestantes ?? 0;  // ej: 2
 
   const diagnosticosUsados =

@@ -277,7 +277,7 @@ const actualizarUsuario = async (req, res) => {
       } else if (tipoSuscripcion === 'free' && usuario.tipoSuscripcion !== 'free') {
         // Downgrade a Free
         usuario.tipoSuscripcion = 'free';
-        usuario.limites.diagnosticosMes = 4;
+        usuario.limites.diagnosticosMes = 3;
         usuario.limites.maxUsuarios = 1;
         usuario.features.exportarPDF = false;
         usuario.features.recomendacionesCompletas = false;

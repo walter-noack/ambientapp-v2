@@ -31,10 +31,10 @@ export default function Upgrade() {
                         <h2 className="text-xl font-semibold">Plan Free</h2>
                     </div>
                     <p className="mb-6 text-slate-600">
-                        Ideal para comenzar. Incluye hasta 4 diagnósticos mensuales y 1 usuario.
+                        Ideal para comenzar. Incluye hasta 3 diagnósticos mensuales y 1 usuario.
                     </p>
                     <ul className="mb-6 space-y-2 text-sm text-slate-700">
-                        <li>- 4 diagnósticos mensuales</li>
+                        <li>- 3 diagnósticos mensuales</li>
                         <li>- 1 usuario</li>
                         <li>- Funciones básicas</li>
                         <li>- No incluye exportación a PDF ni soporte prioritario</li>

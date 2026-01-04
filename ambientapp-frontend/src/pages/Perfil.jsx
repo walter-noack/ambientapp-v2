@@ -348,7 +348,7 @@ export default function Perfil() {
                             <div className="text-[11px] text-slate-500">
                                 {isPro
                                     ? 'Plan Pro: diagnósticos ilimitados.'
-                                    : `Plan Free: ${diagnosticosTotales ?? 4} diagnósticos mensuales.`}
+                                    : `Plan Free: ${diagnosticosTotales ?? 3} diagnósticos mensuales.`}
                             </div>
                             {ultimoResetDiagnosticos && (
                                 <div className="text-[11px] text-slate-400">

@@ -1,5 +1,5 @@
 // backend/src/utils/planLimits.js
-const FREE_MONTHLY_DIAGNOSTICS = 4; // o el número que definas
+const FREE_MONTHLY_DIAGNOSTICS = 3; // o el número que definas
 
 function initPlanInfoIfNeeded(user) {
   if (!user.planInfo) {
